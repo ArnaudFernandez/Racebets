@@ -116,9 +116,9 @@ Pourquoi les roles dans le JWT ne suffisent pas pour `hasRole` ?
 
 Reponse : Spring Security ne sait pas automatiquement convertir un claim custom `roles` en authorities `ROLE_*`. Il faut un `JwtAuthenticationConverter`.
 
-## Lot 2 : Admin REST, Etat Intermediaire
+## Lot 2 : Admin REST Et Angular Reactive Forms
 
-Statut : non valide comme lot complet. Le socle admin et le CRUD backend `Horse` sont termines, mais `Race`, `RaceEntry` et Angular restent a faire.
+Statut : valide fonctionnellement. Le socle admin, les CRUD backend `Horse`, `Race`, `RaceEntry`, la page admin Angular Reactive Forms, l'integration auth frontend JWT, le seeder ADMIN local controle, le durcissement UX et la validation end-to-end avec token backend reel sont termines.
 
 ### Concepts Deja Couverts
 
@@ -128,9 +128,57 @@ Statut : non valide comme lot complet. Le socle admin et le CRUD backend `Horse`
 - CRUD REST admin avec DTO request/response, service, repository.
 - Validation d'entree avec `@NotBlank` et `@Size`.
 - Traduction d'une absence de ressource en HTTP `404` via `@RestControllerAdvice`.
+- Etat metier `RaceState` expose via DTO et conserve lors d'une mise a jour si absent de la requete.
+- Frontend Angular 19/Taiga UI v5 initialise avec Signals, NgRx Signals et SSE.
+- Invariants `RaceEntry` controles avant sauvegarde et proteges aussi par contraintes SQL.
+- Conflits metier admin traduits en HTTP `409 Conflict`.
+- Routes Angular principales lazy-loadees pour garder le bundle initial sous budget.
+- Page `/admin` connectee aux CRUD admin via service HTTP type et Reactive Forms.
+- Login frontend avec guard admin et intercepteur `Authorization: Bearer ...`.
+- Seeder ADMIN local desactive par defaut et active seulement via profil `local`.
+- Test d'integration complet : login ADMIN local, JWT signe par le backend, acces a un endpoint `/api/admin/**`.
+- UX admin : confirmation de suppression, libelles de chargement, erreurs `401/403`, `404` et `409` rendues lisibles.
 
 ### Points A Retenir
 
 Le CRUD `Horse` expose des DTO et non l'entite JPA, meme si l'entite est simple. Ce choix evite de coupler le contrat HTTP au modele de persistence et prepare les CRUD plus riches comme `Race` et `RaceEntry`.
 
 Spring Security 7 peut ajouter une authority technique comme `FACTOR_BEARER`. Les tests doivent verifier la presence des authorities metier attendues sans supposer qu'elles sont les seules.
+
+Le CRUD `Race` garde le resultat hors de l'entite `Race`. Le gagnant et les classements restent a modeliser via `RaceEntry`, ce qui preserve l'invariant valide au Lot 0.
+
+Le CRUD `RaceEntry` est le vrai point metier du Lot 2 : il garantit qu'un cheval est inscrit dans une course avec un numero de dossard unique pour cette course, et que le classement reste optionnel jusqu'au resultat.
+
+L'admin Angular est maintenant branche a l'auth frontend. La session JWT est stockee en `localStorage` avec expiration ; c'est pragmatique pour le projet, mais a challenger avant production selon le niveau de risque XSS accepte.
+
+Le seeder ADMIN local est volontairement controle par configuration : il resout le probleme de bootstrap en developpement et en test d'integration sans introduire de compte admin actif par defaut en production.
+
+### Reponse Senior Synthese
+
+J'ai separe le contrat admin REST des entites JPA via des DTO request/response, puis place les invariants metier dans les services applicatifs. Les endpoints `/api/admin/**` sont proteges par role `ADMIN` a partir d'un claim JWT custom converti en authorities Spring. Cote Angular, la page admin utilise Reactive Forms et un service HTTP type, avec guard et intercepteur JWT. La validation finale couvre un vrai flux local : creation de l'admin par seeder, login, recuperation d'un JWT signe, puis acces a un endpoint admin protege.
+
+### Killer Questions Lot 2
+
+Pourquoi ne pas exposer directement les entites JPA dans les controllers admin ?
+
+Reponse : parce que l'entite est un modele de persistence, pas un contrat HTTP. L'exposer couple l'API a Hibernate, risque les graphes relationnels involontaires, et rend les evolutions de champs plus dangereuses.
+
+Pourquoi traduire les violations d'unicite `RaceEntry` en `409 Conflict` ?
+
+Reponse : le client envoie une requete syntaxiquement valide, mais incompatible avec l'etat actuel du domaine. `400` serait trop generique, `500` exposerait un probleme serveur faux. `409` exprime un conflit metier recuperable.
+
+Pourquoi garder les contraintes SQL si le service verifie deja les doublons ?
+
+Reponse : le service donne un message metier propre, mais la base reste le dernier verrou d'integrite, notamment en cas de concurrence ou de bug applicatif.
+
+Pourquoi tester un login ADMIN reel en integration ?
+
+Reponse : les tests unitaires prouvent chaque brique, mais l'integration verifie le chainage critique : seeding, BCrypt, login, signature JWT, filtre Resource Server, conversion des roles et autorisation admin.
+
+Pourquoi le guard Angular ne suffit pas a proteger `/admin` ?
+
+Reponse : le frontend est seulement une barriere UX. La securite reelle est cote backend avec Spring Security sur `/api/admin/**`; un client peut toujours appeler l'API directement.
+
+Pourquoi le stockage JWT en `localStorage` est a challenger avant production ?
+
+Reponse : il est simple et persistant, mais expose le token en cas de XSS. Selon le modele de menace, des cookies `HttpOnly`, une duree de vie plus courte ou un mecanisme de refresh mieux encadre peuvent etre preferables.

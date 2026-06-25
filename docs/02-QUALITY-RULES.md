@@ -74,6 +74,8 @@ Pour l'authentification :
 
 Les exceptions REST doivent etre traduites via `@RestControllerAdvice`.
 
+Pour les conflits metier previsibles dans l'admin, utiliser une exception explicite traduite en `409 Conflict`, pas une erreur SQL brute.
+
 ## Securite
 
 ### Passwords Et Codes
@@ -157,6 +159,19 @@ Regles :
 - Lancer `mvnw test` avec JDK 25 apres modifications significatives.
 
 Mockito est configure en `javaagent` via Surefire. Ne pas supprimer cette configuration sans raison.
+
+## Frontend Angular
+
+Regles actuelles pour `frontend/` :
+
+- Angular 19 en standalone components.
+- `ChangeDetectionStrategy.OnPush` obligatoire sur les composants.
+- Preferer `input()`, `output()`, `viewChild()` et `computed()` aux APIs decorateur historiques.
+- Utiliser `@ngrx/signals` pour l'etat local applicatif structure.
+- Eviter RxJS lourd dans les composants ; convertir les flux externes en signals dans les services quand c'est pertinent.
+- Aucun `any` non justifie.
+- Pour Taiga UI v5, consulter la documentation MCP Taiga UI avant d'ajouter ou modifier un composant UI significatif.
+- Lancer `npm run build` dans `frontend/` apres une modification frontend non triviale.
 
 ## Build Et Environnement
 

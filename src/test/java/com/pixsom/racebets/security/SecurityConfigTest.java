@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "jwt.expiration=3600000"
 })
 @AutoConfigureMockMvc
-@Import(SecurityConfigTest.TestAdminController.class)
+@Import({SecurityConfigTest.TestAdminController.class, SecurityConfigTest.TestRealtimeController.class})
 class SecurityConfigTest {
 
     @Autowired
@@ -69,6 +69,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void realtimeEndpointAcceptsAnonymousRequest() throws Exception {
+        mockMvc.perform(get("/api/realtime/health"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void adminEndpointRejectsAuthenticatedUserWithoutAdminRole() throws Exception {
         mockMvc.perform(get("/api/admin/health")
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenWithRoles(List.of("USER"))))
@@ -100,6 +106,16 @@ class SecurityConfigTest {
     @Controller
     @RequestMapping("/api/admin")
     static class TestAdminController {
+
+        @GetMapping("/health")
+        ResponseEntity<Void> health() {
+            return ResponseEntity.ok().build();
+        }
+    }
+
+    @Controller
+    @RequestMapping("/api/realtime")
+    static class TestRealtimeController {
 
         @GetMapping("/health")
         ResponseEntity<Void> health() {

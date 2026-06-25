@@ -35,5 +35,6 @@ public class RaceEntry extends AuditableEntity {
 
     @Column(name="horse_number", nullable = false)
     private int horseNumber;
+
     private Integer rank;
 }

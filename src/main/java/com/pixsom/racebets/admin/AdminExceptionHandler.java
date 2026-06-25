@@ -10,6 +10,13 @@ public class AdminExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public void handleNotFound() {
+    public AdminErrorResponse handleNotFound(NotFoundException exception) {
+        return new AdminErrorResponse(exception.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public AdminErrorResponse handleConflict(ConflictException exception) {
+        return new AdminErrorResponse(exception.getMessage());
     }
 }

@@ -51,24 +51,25 @@ Fonctionnalites :
 
 Travail restant dans Lot 1 avant production :
 
-- Ajouter mapping roles -> authorities via `JwtAuthenticationConverter` avant toute authorization par role.
 - Externaliser `JWT_SECRET` via variable d'environnement.
 - Ajouter un seed ou mecanisme de creation initiale d'utilisateurs avec `passwordHash` BCrypt.
 - Eventuellement convertir `expiresIn` en secondes ou renommer en `expiresInMs`.
 
 ### Lot 2 : CRUD Admin REST Et Angular Reactive Forms
 
-Statut : en cours.
+Statut : valide fonctionnellement.
 
 Objectif : creer les APIs admin puis les ecrans Angular permettant de gerer les donnees necessaires au pari.
 
 Backend REST a prevoir :
 
 - CRUD `Horse` : termine cote backend.
-- CRUD `Race`.
-- Gestion des participations `RaceEntry`.
+- CRUD `Race` : termine cote backend.
+- Gestion des participations `RaceEntry` : terminee cote backend.
 - Endpoints de consultation utiles aux ecrans admin.
 - Protection des routes admin par role `ADMIN` : terminee.
+- Seeder ADMIN local controle : termine.
+- Validation d'integration login ADMIN reel + JWT + endpoint admin : terminee.
 
 Ordre recommande :
 
@@ -79,9 +80,15 @@ Ordre recommande :
 5. Creer `HorseService` : fait.
 6. Creer `HorseAdminController` : fait.
 7. Tester controller/service : fait.
-8. Repeter pour `Race` : prochaine etape.
-9. Implementer `RaceEntry` avec contraintes metier fortes.
-10. Ajouter Angular admin avec reactive forms.
+8. Repeter pour `Race` : fait.
+9. Implementer `RaceEntry` avec contraintes metier fortes : fait.
+10. Ajouter Angular admin avec reactive forms : fait.
+11. Durcir l'UX admin : fait pour les erreurs backend, les etats de chargement et les confirmations de suppression.
+12. Valider l'integration end-to-end avec un utilisateur ADMIN reel et un token signe par le backend : fait via `AdminEndToEndTest`.
+
+Frontend actuel : une application Angular 19/Taiga UI v5 existe sous `frontend/`, avec un ecran de pari temps reel factice, NgRx Signals, un snapshot JSON `/api/realtime/race-betting` en attente du vrai WebSocket Lot 3, une page `/admin` Reactive Forms connectee aux CRUD admin backend, une route `/login`, un guard admin et un intercepteur JWT.
+
+Validation Lot 2 : backend `57` tests OK, frontend `npm run build` OK, frontend `npm run lint` OK.
 
 Regle importante : ne pas exposer directement les entites JPA dans les reponses admin si cela cree des graphes ou fuites de champs internes.
 
@@ -122,13 +129,12 @@ Sujets :
 
 ## Prochaine Session Recommandee
 
-Continuer Lot 2 :
+Demarrer Lot 3 ou produire la fiche d'entretien Lot 2 :
 
-1. Ajouter `spring.jpa.open-in-view=false` dans une configuration adaptee.
-2. Creer CRUD admin backend `Race` avec DTO, repository, service, controller et tests.
-3. Implementer `RaceEntry` avec contraintes metier fortes et tests.
-4. Ajouter Angular admin avec reactive forms.
-5. Produire la fiche d'entretien Lot 2 seulement quand le lot complet est valide.
+1. Produire la fiche d'entretien Lot 2 dans `docs/04-INTERVIEW-NOTES.md`.
+2. Demarrer Lot 3 : moteur temps reel WebSocket STOMP et ecran de paris server-driven.
+3. Revoir la strategie de stockage JWT avant production.
+4. Ajouter ou ajuster les endpoints de consultation si le Lot 3 ou l'admin en a besoin.
 
 ## Checklist Avant Toute Nouvelle Feature
 

@@ -19,8 +19,10 @@ public class Race extends AuditableEntity {
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String name;
+
+    @Column(length = 500)
     private String raceImgUrl;
 
     @Enumerated(EnumType.STRING)

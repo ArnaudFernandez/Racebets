@@ -23,7 +23,7 @@ Stack actuelle :
 - Base de test/dev par defaut actuelle : H2 auto-configuree.
 - Securite : Spring Security 7, OAuth2 Resource Server, JWT signe en HS256 avec Nimbus.
 - Tests : JUnit 5, Mockito, Spring Test, MockMvc standalone.
-- Frontend futur : Angular standalone components, TypeScript, Reactive Forms.
+- Frontend : Angular 19 standalone components, TypeScript, Signals, NgRx Signals, Taiga UI v5.
 - Deploiement futur : Docker / Dokploy.
 
 ## Etat Des Lots
@@ -32,7 +32,7 @@ Lot 0 valide : modelisation BDD et entites JPA.
 
 Lot 1 valide : socle securite JWT backend, login par `email + accessCode`, generation de JWT, validation DTO, tests unitaires et MVC.
 
-Lot 2 en cours : socle admin securise et CRUD backend `Horse` termines. Prochaine etape : CRUD backend `Race`, puis `RaceEntry`, puis integration Angular Reactive Forms.
+Lot 2 valide fonctionnellement : socle admin securise, CRUD backend `Horse`, `Race` et `RaceEntry` termines, frontend Angular 19/Taiga UI v5 avec page `/admin` Reactive Forms branchee sur les CRUD, login frontend avec guard/interceptor JWT, UX admin durcie, seeder ADMIN local controle et validation d'integration avec JWT reel.
 
 Lot 3 futur : moteur temps reel WebSocket STOMP, ecran de paris server-driven.
 
@@ -68,24 +68,49 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 .\mvnw.cmd test
 ```
 
-Etat connu au moment de creation de cette documentation :
+Etat backend connu apres validation Lot 2 :
 
 ```text
-Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 57, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
+```
+
+Build frontend connu comme passant :
+
+```powershell
+cd frontend
+npm run build
+```
+
+Lint frontend connu comme passant :
+
+```powershell
+cd frontend
+npm run lint
 ```
 
 ## Warnings Connus
 
 Mockito : warning d'auto-attachement corrige via `maven-surefire-plugin` et `-javaagent` explicite sur `mockito-core`.
 
-JPA : Spring affiche encore `spring.jpa.open-in-view is enabled by default`. A corriger proprement quand une configuration persistence locale/profil sera stabilisee :
+JPA : `spring.jpa.open-in-view=false` est configure dans `application.properties`.
 
 ```properties
 spring.jpa.open-in-view=false
 ```
 
-Ce warning n'est pas bloquant pour Lot 1.
+Seeder ADMIN local : desactive par defaut dans `application.properties`, active uniquement avec le profil `local` via `application-local.properties`.
+
+```properties
+racebets.dev-admin.enabled=false
+```
+
+Credentials locaux connus pour le profil `local` :
+
+```properties
+racebets.dev-admin.email=admin@racebets.local
+racebets.dev-admin.access-code=ADMIN-LOCAL-2026
+```
 
 ## [RÈGLES ARCHITECTURALES FRONTEND : ANGULAR 19, NGRX SIGNALS & TAIGA UI V5]
 1. **PARADIGME SIGNALS STRICT** : `@Input`, `@ViewChild` et RxJS lourd dans les composants sont interdits. Privilégier `input()`, `computed()`, et `@ngrx/signals`.
