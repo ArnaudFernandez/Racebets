@@ -1,0 +1,107 @@
+name: Build and publish containers
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: containers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test backend and frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Test backend
+        run: ./mvnw -B test
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  publish:
+    name: Publish images to GHCR
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare image names and tags
+        id: image
+        shell: bash
+        run: |
+          repository_lc="${GITHUB_REPOSITORY,,}"
+          sha_short="${GITHUB_SHA::7}"
+
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            channel="prod"
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            channel="staging"
+          else
+            channel="manual"
+          fi
+
+          echo "backend=ghcr.io/${repository_lc}/backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=ghcr.io/${repository_lc}/frontend" >> "$GITHUB_OUTPUT"
+          echo "backend_tags=ghcr.io/${repository_lc}/backend:${channel},ghcr.io/${repository_lc}/backend:${channel}-${sha_short}" >> "$GITHUB_OUTPUT"
+          echo "frontend_tags=ghcr.io/${repository_lc}/frontend:${channel},ghcr.io/${repository_lc}/frontend:${channel}-${sha_short}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.backend
+          push: true
+          tags: ${{ steps.image.outputs.backend_tags }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.frontend_tags }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
