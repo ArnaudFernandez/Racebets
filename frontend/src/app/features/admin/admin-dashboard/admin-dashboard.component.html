@@ -1,0 +1,320 @@
+<main class="admin-shell">
+  <section class="hero" tuiCardLarge="compact">
+    <div class="hero-copy">
+      <span class="eyebrow">Admin control room</span>
+      <h1>Administration hippodrome</h1>
+      <p>CRUD securise, donnees de course et pilotage des modules publics depuis un poste unique.</p>
+    </div>
+    <div class="hero-stats" aria-label="Resume admin">
+      <span><strong>{{ horses().length }}</strong> chevaux</span>
+      <span><strong>{{ races().length }}</strong> courses</span>
+      <span><strong>{{ raceEntries().length }}</strong> inscriptions</span>
+    </div>
+    <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading()" (click)="refreshAll()">
+      Rafraichir
+    </button>
+  </section>
+
+  @if (error(); as errorMessage) {
+    <p class="message error" role="alert">{{ errorMessage }}</p>
+  }
+
+  @if (success(); as successMessage) {
+    <p class="message success" role="status">{{ successMessage }}</p>
+  }
+
+  @if (loadingLabel(); as label) {
+    <p class="message info loading-inline" role="status" aria-live="polite">
+      <tui-loader size="s" />
+      <span>{{ label }}</span>
+    </p>
+  }
+
+  @if (deleteTarget(); as target) {
+    <section class="confirm-panel" tuiCardLarge="compact" role="alertdialog" aria-labelledby="delete-title">
+      <div>
+        <h2 id="delete-title">Confirmer la suppression</h2>
+        <p>Cette action supprimera: <strong>{{ target.label }}</strong></p>
+      </div>
+      <div class="form-actions">
+        <button tuiButton type="button" size="s" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmDelete()">
+          Supprimer definitivement
+        </button>
+        <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelDelete()">
+          Annuler
+        </button>
+      </div>
+    </section>
+  }
+
+  <tui-tabs class="section-nav" [activeItemIndex]="activeSectionIndex()" aria-label="Sections admin">
+    @for (section of sections; track section.id) {
+      <button tuiTab type="button" (click)="setSection(section.id)">
+        {{ section.label }}
+        @if (sectionCount(section.id) !== null) {
+          <span tuiBadge size="s" appearance="neutral">{{ sectionCount(section.id) }}</span>
+        }
+      </button>
+    }
+  </tui-tabs>
+
+  @if (activeSection() === 'features') {
+    <app-feature-panel />
+  }
+
+  @if (activeSection() === 'users') {
+    <app-admin-user-panel />
+  }
+
+  @if (activeSection() === 'quizzes') {
+    <app-admin-quiz-panel />
+  }
+
+  @if (activeSection() === 'horses') {
+    <section class="admin-grid">
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>{{ editingHorseId() === null ? 'Nouveau cheval' : 'Modifier le cheval' }}</h2>
+            <p tuiSubtitle>Nom public affiche dans les listes admin et pari</p>
+          </hgroup>
+        </header>
+
+        <form class="form" [formGroup]="horseForm" (ngSubmit)="submitHorse()">
+          <tui-textfield>
+            <input tuiInput formControlName="name" placeholder="Nom du cheval" />
+          </tui-textfield>
+
+          <div class="form-actions">
+            <button tuiButton type="submit" size="s" [disabled]="loading()">
+              {{ editingHorseId() === null ? 'Creer' : 'Enregistrer' }}
+            </button>
+            <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelHorseEdit()">
+              Reinitialiser
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>Chevaux</h2>
+            <p tuiSubtitle>{{ horses().length }} enregistrements</p>
+          </hgroup>
+        </header>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (horse of horses(); track horse.id) {
+                <tr>
+                  <td data-label="ID">{{ horse.id }}</td>
+                  <td data-label="Nom">{{ horse.name }}</td>
+                  <td class="row-actions" data-label="Actions">
+                    <button tuiButton type="button" size="xs" appearance="secondary" (click)="editHorse(horse)">Editer</button>
+                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestHorseDelete(horse)">Supprimer</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3" class="empty">Aucun cheval.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  }
+
+  @if (activeSection() === 'races') {
+    <section class="admin-grid">
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>{{ editingRaceId() === null ? 'Nouvelle course' : 'Modifier la course' }}</h2>
+            <p tuiSubtitle>La course ne porte pas le gagnant: le resultat appartient aux participations</p>
+          </hgroup>
+        </header>
+
+        <form class="form" [formGroup]="raceForm" (ngSubmit)="submitRace()">
+          <tui-textfield>
+            <input tuiInput formControlName="name" placeholder="Nom de la course" />
+          </tui-textfield>
+
+          <tui-textfield>
+            <input tuiInput formControlName="raceImgUrl" placeholder="URL image optionnelle" />
+          </tui-textfield>
+
+          <label class="field-label">
+            Etat
+            <select formControlName="state">
+              @for (state of raceStates; track state) {
+                <option [ngValue]="state">{{ state }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="form-actions">
+            <button tuiButton type="submit" size="s" [disabled]="loading()">
+              {{ editingRaceId() === null ? 'Creer' : 'Enregistrer' }}
+            </button>
+            <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelRaceEdit()">
+              Reinitialiser
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>Courses</h2>
+            <p tuiSubtitle>{{ races().length }} enregistrements</p>
+          </hgroup>
+        </header>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Etat</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (race of races(); track race.id) {
+                <tr>
+                  <td data-label="ID">{{ race.id }}</td>
+                  <td data-label="Nom">{{ race.name }}</td>
+                  <td data-label="Etat"><span tuiBadge size="s" [appearance]="raceStateAppearance(race.state)">{{ race.state }}</span></td>
+                  <td class="row-actions" data-label="Actions">
+                    <button tuiButton type="button" size="xs" appearance="secondary" (click)="editRace(race)">Editer</button>
+                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestRaceDelete(race)">Supprimer</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty">Aucune course.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  }
+
+  @if (activeSection() === 'entries') {
+    <section class="admin-grid">
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>{{ editingRaceEntryId() === null ? 'Nouvelle participation' : 'Modifier la participation' }}</h2>
+            <p tuiSubtitle>Un cheval et un dossard uniques par course</p>
+          </hgroup>
+        </header>
+
+        <form class="form" [formGroup]="raceEntryForm" (ngSubmit)="submitRaceEntry()">
+          <label class="field-label">
+            Course
+            <select formControlName="raceId">
+              <option [ngValue]="null">Selectionner une course</option>
+              @for (race of races(); track race.id) {
+                <option [ngValue]="race.id">{{ race.name }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field-label">
+            Cheval
+            <select formControlName="horseId">
+              <option [ngValue]="null">Selectionner un cheval</option>
+              @for (horse of horses(); track horse.id) {
+                <option [ngValue]="horse.id">{{ horse.name }}</option>
+              }
+            </select>
+          </label>
+
+          <tui-textfield>
+            <input tuiInput type="number" formControlName="horseNumber" placeholder="Numero de dossard" />
+          </tui-textfield>
+
+          <tui-textfield>
+            <input tuiInput type="number" formControlName="rank" placeholder="Classement optionnel" />
+          </tui-textfield>
+
+          <div class="form-actions">
+            <button tuiButton type="submit" size="s" [disabled]="loading()">
+              {{ editingRaceEntryId() === null ? 'Creer' : 'Enregistrer' }}
+            </button>
+            <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelRaceEntryEdit()">
+              Reinitialiser
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article tuiCardLarge="compact">
+        <header tuiHeader="body-m">
+          <hgroup tuiTitle>
+            <h2>Participations</h2>
+            <p tuiSubtitle>{{ raceEntries().length }} inscriptions</p>
+          </hgroup>
+        </header>
+
+        <label class="field-label filter">
+          Filtrer par course
+          <select #raceFilter [value]="selectedRaceId() ?? ''" (change)="filterEntriesByRace(raceFilter.value)">
+            <option value="">Toutes les courses</option>
+            @for (race of races(); track race.id) {
+              <option [value]="race.id">{{ race.name }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Dossard</th>
+                <th>Cheval</th>
+                <th>Rang</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of sortedRaceEntries(); track entry.id) {
+                <tr>
+                  <td data-label="Course">{{ entry.raceName }}</td>
+                  <td data-label="Dossard">{{ entry.horseNumber }}</td>
+                  <td data-label="Cheval">{{ entry.horseName }}</td>
+                  <td data-label="Rang">{{ entry.rank ?? 'Non classe' }}</td>
+                  <td class="row-actions" data-label="Actions">
+                    <button tuiButton type="button" size="xs" appearance="secondary" (click)="editRaceEntry(entry)">Editer</button>
+                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestRaceEntryDelete(entry)">Supprimer</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty">Aucune participation.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  }
+</main>

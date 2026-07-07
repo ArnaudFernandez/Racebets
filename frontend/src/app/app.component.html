@@ -1,0 +1,72 @@
+<tui-root>
+  <div class="app-frame">
+    <header class="app-topbar">
+      <a class="brand" routerLink="/" aria-label="Racebets accueil">
+        <span class="brand-mark">RB</span>
+        <span>
+          <strong>Racebets</strong>
+          <small>Live race ops</small>
+        </span>
+      </a>
+
+      <nav class="app-nav desktop-nav" aria-label="Navigation principale">
+        @if (features.bettingEnabled()) {
+          <a tuiButton routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Paris live
+          </a>
+        }
+        @if (features.quizEnabled()) {
+          <a tuiButton routerLink="/quiz" routerLinkActive="active">
+            Quiz live
+          </a>
+        }
+        @if (auth.isAdmin()) {
+          <a tuiButton routerLink="/admin" routerLinkActive="active">
+            Admin
+          </a>
+        }
+      </nav>
+
+      <div class="session-box">
+        <span class="session-dot" [class.online]="auth.isAuthenticated()"></span>
+        <span>{{ auth.isAuthenticated() ? 'Session active' : 'Invite' }}</span>
+        @if (auth.isAuthenticated()) {
+          <button tuiButton type="button" size="s" appearance="secondary" (click)="logout()">
+            Sortir
+          </button>
+        } @else {
+          <a tuiButton routerLink="/login" routerLinkActive="active" size="s" appearance="secondary">
+            Connexion
+          </a>
+        }
+      </div>
+    </header>
+
+    <router-outlet />
+
+    <nav class="mobile-nav" aria-label="Navigation mobile">
+      @if (features.bettingEnabled()) {
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <span>Paris</span>
+        </a>
+      }
+      @if (features.quizEnabled()) {
+        <a routerLink="/quiz" routerLinkActive="active">
+          <span>Quiz</span>
+        </a>
+      }
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin" routerLinkActive="active">
+          <span>Admin</span>
+        </a>
+      }
+      @if (!auth.isAuthenticated()) {
+        <a routerLink="/login" routerLinkActive="active">
+          <span>Login</span>
+        </a>
+      } @else {
+        <button type="button" (click)="logout()">Sortir</button>
+      }
+    </nav>
+  </div>
+</tui-root>

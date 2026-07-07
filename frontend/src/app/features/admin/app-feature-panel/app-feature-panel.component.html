@@ -1,0 +1,38 @@
+<section class="feature-panel" tuiCardLarge="compact">
+  <header tuiHeader="body-m">
+    <hgroup tuiTitle>
+      <h2>Affichage de l application</h2>
+      <p tuiSubtitle>Choisissez les modules visibles et accessibles aux utilisateurs</p>
+    </hgroup>
+  </header>
+
+  @if (error(); as message) {
+    <p class="message error" role="alert">{{ message }}</p>
+  }
+  @if (success(); as message) {
+    <p class="message success" role="status">{{ message }}</p>
+  }
+
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="check-card">
+      <span>
+        <strong>Paris live</strong>
+        <small>Affiche la navigation et autorise la page de paris live.</small>
+      </span>
+      <input tuiSwitch type="checkbox" formControlName="bettingEnabled" />
+    </label>
+
+    <label class="check-card">
+      <span>
+        <strong>Quiz live</strong>
+        <small>Affiche la navigation et autorise la page de quiz live.</small>
+      </span>
+      <input tuiSwitch type="checkbox" formControlName="quizEnabled" />
+    </label>
+
+    <div class="form-actions">
+      <button tuiButton type="submit" size="s" [disabled]="loading()">Enregistrer</button>
+      <button tuiButton type="button" size="s" appearance="secondary" (click)="load()">Recharger</button>
+    </div>
+  </form>
+</section>

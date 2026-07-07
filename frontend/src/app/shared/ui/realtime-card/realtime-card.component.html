@@ -1,0 +1,12 @@
+<section class="realtime-shell" tuiCardLarge="compact">
+  <header class="realtime-header" tuiHeader="body-m">
+    <hgroup tuiTitle>
+      <h2>{{ title() }}</h2>
+      @if (subtitle()) {
+        <p tuiSubtitle>{{ subtitle() }}</p>
+      }
+    </hgroup>
+  </header>
+
+  <ng-content />
+</section>

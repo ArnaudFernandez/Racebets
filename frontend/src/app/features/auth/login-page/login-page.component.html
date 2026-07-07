@@ -1,0 +1,101 @@
+<main class="login-shell">
+  <section class="login-brief" aria-label="Presentation Racebets">
+    <span class="eyebrow">Acces hippodrome</span>
+    <h1>Une entree nette dans l'experience live.</h1>
+    <p>
+      Connectez les joueurs, les quiz et l'admin avec un seul code d'acces. L'interface reste lisible meme sur mobile en tribune.
+    </p>
+    <div class="brief-grid" aria-hidden="true">
+      <span>JWT</span>
+      <span>Live</span>
+      <span>Admin</span>
+    </div>
+  </section>
+
+  <section tuiCardLarge="compact" class="login-card">
+    <header tuiHeader="h4">
+      <hgroup tuiTitle>
+        <h1>{{ mode() === 'login' ? 'Connexion' : 'Creation de compte' }}</h1>
+        <p tuiSubtitle>{{ mode() === 'login' ? 'Retrouvez votre session live.' : 'Creez un acces joueur en quelques secondes.' }}</p>
+      </hgroup>
+    </header>
+
+    <div class="mode-switch" role="tablist" aria-label="Mode d acces">
+      <button tuiButton type="button" size="s" [appearance]="mode() === 'login' ? 'primary' : 'secondary'" (click)="setMode('login')">
+        Connexion
+      </button>
+      <button tuiButton type="button" size="s" [appearance]="mode() === 'register' ? 'primary' : 'secondary'" (click)="setMode('register')">
+        Inscription
+      </button>
+    </div>
+
+    @if (error(); as errorMessage) {
+      <p class="message error" role="alert">{{ errorMessage }}</p>
+    }
+
+    @if (mode() === 'login') {
+      <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+        <label class="field-copy">
+          Email
+          <tui-textfield>
+            <input tuiInput formControlName="email" type="email" placeholder="admin@racebets.local" autocomplete="username" />
+          </tui-textfield>
+        </label>
+
+        <label class="field-copy">
+          Code d'acces
+          <tui-textfield>
+            <input tuiInput formControlName="accessCode" type="password" placeholder="Votre code" autocomplete="current-password" />
+          </tui-textfield>
+        </label>
+
+        <button tuiButton type="submit" size="l" [disabled]="loading()">
+          {{ loading() ? 'Connexion...' : 'Se connecter' }}
+        </button>
+      </form>
+    } @else {
+      <form class="form" [formGroup]="registerForm" (ngSubmit)="register()">
+        <div class="identity-grid">
+          <label class="field-copy">
+            Prenom
+            <tui-textfield>
+              <input tuiInput formControlName="name" placeholder="Prenom" autocomplete="given-name" />
+            </tui-textfield>
+          </label>
+
+          <label class="field-copy">
+            Nom
+            <tui-textfield>
+              <input tuiInput formControlName="surname" placeholder="Nom" autocomplete="family-name" />
+            </tui-textfield>
+          </label>
+        </div>
+
+        <label class="field-copy">
+          Date de naissance
+          <tui-textfield>
+            <input tuiInput formControlName="birthDate" type="date" placeholder="Date de naissance" autocomplete="bday" />
+          </tui-textfield>
+        </label>
+
+        <label class="field-copy">
+          Email
+          <tui-textfield>
+            <input tuiInput formControlName="email" type="email" placeholder="vous@example.com" autocomplete="username" />
+          </tui-textfield>
+        </label>
+
+        <label class="field-copy">
+          Code d'acces
+          <tui-textfield>
+            <input tuiInput formControlName="accessCode" type="password" placeholder="8 caracteres minimum" autocomplete="new-password" />
+          </tui-textfield>
+        </label>
+
+        <button tuiButton type="submit" size="l" [disabled]="loading()">
+          {{ loading() ? 'Creation...' : 'Creer mon compte' }}
+        </button>
+      </form>
+    }
+  </section>
+</main>

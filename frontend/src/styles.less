@@ -1,0 +1,198 @@
+//@import url('https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@600;700&family=Geist:wght@400;500;600;700;800&display=swap');
+@import '@taiga-ui/styles/taiga-ui-theme.less';
+@import '@taiga-ui/styles/taiga-ui-fonts.less';
+
+:root {
+  --rb-font-body: 'Geist', 'Segoe UI Variable', sans-serif;
+  --rb-font-display: 'Azeret Mono', 'Geist', sans-serif;
+  --rb-ink: oklch(21% 0.025 142deg);
+  --rb-muted: oklch(44% 0.035 142deg);
+  --rb-paper: oklch(97% 0.018 92deg);
+  --rb-paper-strong: oklch(99% 0.012 92deg);
+  --rb-panel: oklch(94% 0.02 102deg);
+  --rb-line: oklch(84% 0.028 104deg);
+  --rb-turf: oklch(42% 0.13 151deg);
+  --rb-turf-deep: oklch(27% 0.085 151deg);
+  --rb-amber: oklch(78% 0.16 78deg);
+  --rb-coral: oklch(63% 0.17 28deg);
+  --rb-radius-lg: 1.75rem;
+  --rb-radius-md: 1.125rem;
+  --rb-shadow: 0 1.25rem 4rem color-mix(in oklch, var(--rb-turf-deep) 14%, transparent);
+  --rb-shadow-soft: 0 0.75rem 2.5rem color-mix(in oklch, var(--rb-turf-deep) 9%, transparent);
+}
+
+html {
+  background: var(--rb-paper);
+  color: var(--rb-ink);
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-inline-size: 20rem;
+  background:
+    radial-gradient(circle at 9% 3%, color-mix(in oklch, var(--rb-amber) 24%, transparent) 0 13rem, transparent 24rem),
+    radial-gradient(circle at 92% 2%, color-mix(in oklch, var(--rb-turf) 14%, transparent) 0 16rem, transparent 26rem),
+    linear-gradient(135deg, var(--rb-paper-strong), var(--rb-paper) 48%, color-mix(in oklch, var(--rb-turf) 8%, var(--rb-paper)));
+  color: var(--rb-ink);
+  font-family: var(--rb-font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  color: var(--rb-paper-strong);
+  background: var(--rb-turf-deep);
+}
+
+[tuiButton] {
+  font-weight: 700;
+}
+
+tui-textfield {
+  --tui-radius-m: 1rem;
+}
+
+.eyebrow {
+  font-family: var(--rb-font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.message {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--tui-text-negative);
+  background: var(--tui-status-negative-pale);
+}
+
+.success {
+  color: var(--tui-text-positive);
+  background: var(--tui-status-positive-pale);
+}
+
+.info {
+  color: var(--tui-text-action);
+  background: var(--tui-status-info-pale);
+}
+
+.empty {
+  color: var(--rb-muted);
+}
+
+.empty-state {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1.1rem;
+  border: 1px dashed color-mix(in oklch, var(--rb-turf) 34%, var(--rb-line));
+  border-radius: 1.2rem;
+  background: color-mix(in oklch, var(--rb-panel) 62%, transparent);
+  color: var(--rb-muted);
+}
+
+.empty-state strong {
+  color: var(--rb-ink);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-block-start: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th,
+td {
+  padding: 0.85rem;
+  text-align: start;
+  border-block-end: 1px solid color-mix(in oklch, var(--rb-line) 72%, transparent);
+  vertical-align: middle;
+}
+
+th {
+  color: var(--rb-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 46rem) {
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  tr {
+    padding: 0.8rem;
+    border: 1px solid color-mix(in oklch, var(--rb-line) 76%, transparent);
+    border-radius: 1rem;
+    background: var(--rb-paper-strong);
+  }
+
+  td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    color: var(--rb-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .row-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,0 +1,110 @@
+<section class="users-panel">
+  @if (error(); as message) {
+    <p class="message error" role="alert">{{ message }}</p>
+  }
+  @if (success(); as message) {
+    <p class="message success" role="status">{{ message }}</p>
+  }
+
+  @if (deleteTarget(); as user) {
+    <section class="confirm-panel" tuiCardLarge="compact" role="alertdialog" aria-labelledby="delete-user-title">
+      <div>
+        <h2 id="delete-user-title">Supprimer ce compte ?</h2>
+        <p>{{ user.email }}</p>
+      </div>
+      <div class="form-actions">
+        <button tuiButton type="button" size="s" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmDelete()">Supprimer</button>
+        <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelDelete()">Annuler</button>
+      </div>
+    </section>
+  }
+
+  <section class="users-grid">
+    <article tuiCardLarge="compact">
+      <header tuiHeader="body-m">
+        <hgroup tuiTitle>
+          <h2>{{ editingUserId() === null ? 'Nouvel utilisateur' : 'Modifier l utilisateur' }}</h2>
+          <p tuiSubtitle>Creation, activation et roles applicatifs</p>
+        </hgroup>
+      </header>
+
+      <form class="form" [formGroup]="userForm" (ngSubmit)="submit()">
+        <div class="two-cols">
+          <tui-textfield>
+            <input tuiInput formControlName="name" placeholder="Prenom" autocomplete="given-name" />
+          </tui-textfield>
+          <tui-textfield>
+            <input tuiInput formControlName="surname" placeholder="Nom" autocomplete="family-name" />
+          </tui-textfield>
+        </div>
+
+        <tui-textfield>
+          <input tuiInput formControlName="birthDate" type="date" placeholder="Date de naissance" />
+        </tui-textfield>
+
+        <tui-textfield>
+          <input tuiInput formControlName="email" type="email" placeholder="Email" autocomplete="username" />
+        </tui-textfield>
+
+        <tui-textfield>
+          <input tuiInput formControlName="accessCode" type="password" [placeholder]="editingUserId() === null ? 'Code d acces obligatoire' : 'Nouveau code d acces optionnel'" autocomplete="new-password" />
+        </tui-textfield>
+
+        <label class="check-row">
+          <span>Marque present</span>
+          <input tuiSwitch type="checkbox" formControlName="present" />
+        </label>
+
+        <fieldset class="roles">
+          <legend>Roles</legend>
+          <label><input tuiCheckbox type="checkbox" formControlName="user" /> USER</label>
+          <label><input tuiCheckbox type="checkbox" formControlName="vip" /> VIP</label>
+          <label><input tuiCheckbox type="checkbox" formControlName="admin" /> ADMIN</label>
+        </fieldset>
+
+        <div class="form-actions">
+          <button tuiButton type="submit" size="s" [disabled]="loading()">{{ editingUserId() === null ? 'Creer' : 'Enregistrer' }}</button>
+          <button tuiButton type="button" size="s" appearance="secondary" (click)="reset()">Reinitialiser</button>
+        </div>
+      </form>
+    </article>
+
+    <article tuiCardLarge="compact">
+      <header tuiHeader="body-m">
+        <hgroup tuiTitle>
+          <h2>Utilisateurs</h2>
+          <p tuiSubtitle>{{ users().length }} compte(s)</p>
+        </hgroup>
+        <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Rafraichir</button>
+      </header>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Nom</th><th>Email</th><th>Roles</th><th>Etat</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td data-label="Nom">{{ user.name }} {{ user.surname }}</td>
+                <td data-label="Email">{{ user.email }}</td>
+                <td data-label="Roles">
+                  @for (role of user.roles; track role) {
+                    <span tuiBadge size="s" appearance="neutral" class="role-badge">{{ role }}</span>
+                  }
+                </td>
+                <td data-label="Etat"><span tuiBadge size="s" [appearance]="user.present ? 'positive' : 'neutral'">{{ user.present ? 'Present' : 'Absent' }}</span></td>
+                <td class="row-actions" data-label="Actions">
+                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="edit(user)">Editer</button>
+                  <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestDelete(user)">Supprimer</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="empty">Aucun utilisateur.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+</section>
