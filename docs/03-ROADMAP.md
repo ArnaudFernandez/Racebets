@@ -51,9 +51,10 @@ Fonctionnalites :
 
 Travail restant dans Lot 1 avant production :
 
-- Externaliser `JWT_SECRET` via variable d'environnement.
-- Ajouter un seed ou mecanisme de creation initiale d'utilisateurs avec `passwordHash` BCrypt.
 - Eventuellement convertir `expiresIn` en secondes ou renommer en `expiresInMs`.
+
+`JWT_SECRET` est externalise et obligatoire. Le seeder admin controle permet le bootstrap initial puis doit etre
+desactive.
 
 ### Lot 2 : CRUD Admin REST Et Angular Reactive Forms
 
@@ -134,7 +135,7 @@ Termine dans ce lot :
 
 ### Lot 4 : Docker / CI-CD / Dokploy
 
-Statut : futur.
+Statut : socle termine, configuration Dokploy et recette VPS a effectuer.
 
 Objectif : packaging et deploiement.
 

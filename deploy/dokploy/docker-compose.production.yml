@@ -1,8 +1,14 @@
 name: racebets-production
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.10-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-racebets_production}
@@ -15,6 +21,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    stop_grace_period: 30s
     networks:
       - racebets
 
@@ -29,26 +40,50 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-racebets_production}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-racebets}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:?Set SPRING_JPA_HIBERNATE_DDL_AUTO in Dokploy}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Dokploy}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
-      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=75.0 -Djava.io.tmpdir=/tmp}
+      RACEBETS_DEV_ADMIN_ENABLED: ${RACEBETS_DEV_ADMIN_ENABLED:-false}
+      RACEBETS_DEV_ADMIN_EMAIL: ${RACEBETS_DEV_ADMIN_EMAIL:-}
+      RACEBETS_DEV_ADMIN_ACCESS_CODE: ${RACEBETS_DEV_ADMIN_ACCESS_CODE:-}
     expose:
       - "8080"
     networks:
       - racebets
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging: *default-logging
+    stop_grace_period: 30s
 
   frontend:
     image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE in Dokploy}
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       BACKEND_URL: http://backend:8080
     expose:
-      - "80"
+      - "8080"
     networks:
       - racebets
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging: *default-logging
+    stop_grace_period: 15s
 
 volumes:
   postgres_data:

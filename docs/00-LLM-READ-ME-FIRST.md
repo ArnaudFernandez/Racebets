@@ -99,6 +99,9 @@ JPA : `spring.jpa.open-in-view=false` est configure dans `application.properties
 spring.jpa.open-in-view=false
 ```
 
+JWT : aucun secret de signature n'est versionne. `JWT_SECRET` est obligatoire au demarrage et doit contenir au
+minimum 32 octets. Les tests utilisent uniquement une valeur dediee dans `src/test/resources`.
+
 Seeder ADMIN local : desactive par defaut dans `application.properties`, active uniquement avec le profil `local` via `application-local.properties`.
 
 ```properties

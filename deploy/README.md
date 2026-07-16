@@ -1,47 +1,69 @@
-# Deployment
+# Deploiement Racebets
 
-This project is deployed as three containers per environment:
+Racebets est deploye sous forme de trois services prives : PostgreSQL, le backend Spring Boot et le frontend
+Angular servi par Nginx. Seul le frontend doit recevoir un domaine public. Il relaie `/api/*` vers le backend sur
+le reseau Docker interne.
 
-- PostgreSQL database
-- Spring Boot backend
-- Angular/Nginx frontend
+## Images publiees
 
-GitHub Actions builds the backend and frontend images, then publishes them to GHCR. Dokploy pulls those images and runs the compose files in `deploy/dokploy`.
+Le workflow `.github/workflows/container-build.yml` teste le projet puis publie dans GHCR :
 
-## Images
+- `ghcr.io/arnaudfernandez/racebets/backend:prod-<sha-complet>` depuis `main` ;
+- `ghcr.io/arnaudfernandez/racebets/frontend:prod-<sha-complet>` depuis `main` ;
+- les equivalents `staging-<sha-complet>` depuis `staging` ;
+- des alias mobiles `prod` et `staging`, pratiques pour l'observation mais a ne pas utiliser pour un deploiement
+  reproductible.
 
-For repository `<owner>/<repo>`, GitHub Actions publishes:
+Les deux images configurees dans Dokploy doivent toujours porter le meme SHA complet. Un retour arriere consiste a
+remettre les deux tags du dernier commit sain puis a redeployer. La base PostgreSQL n'est jamais exposee par un port
+public.
 
-- `ghcr.io/<owner>/<repo>/backend:staging` from branch `staging`
-- `ghcr.io/<owner>/<repo>/frontend:staging` from branch `staging`
-- `ghcr.io/<owner>/<repo>/backend:prod` from branch `main`
-- `ghcr.io/<owner>/<repo>/frontend:prod` from branch `main`
+## Secrets obligatoires
 
-Each build also publishes immutable short-SHA tags:
+Ne jamais copier un secret dans Git. Les valeurs sont creees directement dans Dokploy :
 
-- `staging-<sha>`
-- `prod-<sha>`
+```bash
+openssl rand -hex 32  # POSTGRES_PASSWORD
+openssl rand -hex 64  # JWT_SECRET
+openssl rand -base64 24  # code du premier administrateur
+```
 
-## Dokploy Compose Files
+Le secret JWT versionne dans une ancienne revision du depot doit etre considere compromis et ne doit jamais etre
+reutilise. `JWT_SECRET` est obligatoire au demarrage et doit contenir au minimum 32 octets.
 
-- Staging: `deploy/dokploy/docker-compose.staging.yml`
-- Production: `deploy/dokploy/docker-compose.production.yml`
+## Premier administrateur
 
-Use the matching `.env.example` file as a checklist for Dokploy environment variables. Do not commit real `.env` files or secrets.
+Sur une base neuve uniquement, effectuer un bootstrap temporaire :
 
-## Required Variables
+1. Definir `RACEBETS_DEV_ADMIN_ENABLED=true` dans Dokploy.
+2. Definir `RACEBETS_DEV_ADMIN_EMAIL` et `RACEBETS_DEV_ADMIN_ACCESS_CODE` avec des valeurs uniques.
+3. Deployer, verifier que la connexion administrateur fonctionne.
+4. Remettre immediatement `RACEBETS_DEV_ADMIN_ENABLED=false`.
+5. Supprimer les deux variables contenant l'email et le code, puis redeployer.
 
-- `BACKEND_IMAGE`: backend image tag to deploy.
-- `FRONTEND_IMAGE`: frontend image tag to deploy.
-- `POSTGRES_DB`: database name.
-- `POSTGRES_USER`: database user.
-- `POSTGRES_PASSWORD`: database password.
-- `JWT_SECRET`: HS256 signing secret. Use a long random value.
-- `JWT_EXPIRATION`: token lifetime in milliseconds.
-- `SPRING_JPA_HIBERNATE_DDL_AUTO`: defaults to `update` for first deployments.
+Le seeder n'ecrase pas le code d'un compte existant. Il ne doit toutefois jamais rester active en production.
 
-## Routing
+## Variables
 
-Expose the `frontend` service on port `80` in Dokploy. The frontend Nginx container proxies `/api/*` to the internal backend service, so the public application can use a single domain.
+Les fichiers `production.env.example` et `staging.env.example` sont des listes de controle. Pour le premier
+deploiement, `SPRING_JPA_HIBERNATE_DDL_AUTO=update` initialise le schema. L'utilisation d'un outil de migrations
+versionnees (Flyway ou Liquibase) reste necessaire avant des evolutions de schema complexes ; ne pas passer
+aveuglement a `validate` tant qu'aucune migration initiale ne decrit le schema.
 
-The backend service listens on internal port `8080`. It does not need a public domain unless you explicitly want one.
+## Dokploy
+
+- Compose production : `deploy/dokploy/docker-compose.production.yml`.
+- Compose staging : `deploy/dokploy/docker-compose.staging.yml`.
+- Service public : `frontend`.
+- Port interne du domaine : `8080`.
+- HTTPS : active avec un certificat Let's Encrypt.
+- `backend`, `postgres` et leurs ports ne doivent avoir aucun domaine ni publication de port.
+
+Les conteneurs applicatifs s'executent sans privileges, avec un systeme de fichiers en lecture seule, toutes les
+capabilities Linux supprimees, un `/tmp` borne, des healthchecks et une rotation des journaux.
+
+## Sauvegardes
+
+Configurer une destination S3 hors du VPS, une sauvegarde PostgreSQL quotidienne, une retention d'au moins sept
+jours et lancer un test manuel. Tester aussi une restauration avant l'ouverture publique. Le volume nomme
+`postgres_data` persiste entre les deploiements mais ne remplace jamais une sauvegarde externe.

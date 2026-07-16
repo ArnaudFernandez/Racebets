@@ -223,7 +223,8 @@ racebets.dev-admin.email=admin@racebets.local
 racebets.dev-admin.access-code=ADMIN-LOCAL-2026
 ```
 
-Le seeder encode toujours le code d'acces avec BCrypt et ne doit pas etre active en production.
+Le seeder encode toujours le code d'acces avec BCrypt. En production, il peut uniquement servir au bootstrap du
+premier administrateur sur une base neuve ; il doit etre desactive et ses variables supprimees juste apres.
 
 ## Lot 2 Admin REST
 
@@ -438,3 +439,16 @@ La liste publique ne retourne que les partenaires coches et leurs logos sont mis
 d'URL basee sur `updatedAt`. Le frontend ne les affiche que lorsque le snapshot live ne contient aucune course. Le
 logo institutionnel `logo_le_bouscat.png`, carre en 600 x 600, est utilise sans deformation dans l'entete, l'ecran
 d'attente, le favicon PNG et l'icone Apple Touch.
+
+## Systeme D'Interface
+
+Le frontend repose sur un systeme visuel unique defini dans `styles.less` : typographie systeme, palette neutre et
+vert hippodrome, echelle d'espacement, bordures, rayons, ombres et etats de focus partages. Les pages limitent leur
+largeur de lecture, utilisent des surfaces blanches sur un fond neutre et reservent les couleurs fortes aux actions
+et aux changements d'etat importants.
+
+La navigation est un bandeau compact sur ordinateur et une barre d'onglets persistante en bas sur mobile. Les
+tableaux admin deviennent des fiches etiquetees sous 736 px, les workflows longs restent parcourables
+horizontalement et les actions principales occupent toute la largeur disponible lorsque cela facilite la prise en
+main tactile. Les cibles interactives conservent une taille confortable, un focus visible et leur semantique HTML
+native. Les animations respectent `prefers-reduced-motion`.
