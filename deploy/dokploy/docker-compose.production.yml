@@ -75,6 +75,12 @@ services:
       NGINX_ENVSUBST_OUTPUT_DIR: /tmp
     expose:
       - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - racebets
     read_only: true
