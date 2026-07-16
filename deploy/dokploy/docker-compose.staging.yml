@@ -79,7 +79,7 @@ services:
       - racebets
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=64m
+      - /tmp:rw,noexec,nosuid,uid=101,gid=101,mode=0755,size=64m
     cap_drop:
       - ALL
     security_opt:
