@@ -1,234 +1,74 @@
-:host {
-  display: block;
-}
+:host { display: block; }
+.live-shell { display: grid; gap: 1rem; width: min(76rem, 100%); margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
+.race-stage { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: end; min-block-size: 18rem; padding: clamp(1.5rem, 4vw, 3rem); border-radius: 1.5rem; background: #133c29; color: white; box-shadow: var(--rb-shadow); }
+.state-bet_starting { background: #243c54; }
+.state-betting { background: #0c5632; }
+.state-bet_closed { background: #39443e; }
+.state-finished { background: #574522; }
+.stage-copy { max-inline-size: 48rem; }
+.live-kicker { display: flex; gap: .5rem; align-items: center; color: rgba(255,255,255,.72); font-size: .78rem; font-weight: 700; }
+.pulse { inline-size: .5rem; block-size: .5rem; border-radius: 50%; background: rgba(255,255,255,.45); }
+.pulse.active { background: #70db9a; box-shadow: 0 0 0 .3rem rgba(112,219,154,.14); animation: pulse 1.7s ease-out infinite; }
+.race-name { margin: 2rem 0 .35rem; color: rgba(255,255,255,.7); font-size: .95rem; }
+.race-stage h1 { max-inline-size: 17ch; margin: 0; font-size: clamp(2.4rem, 5vw, 4.6rem); line-height: 1; letter-spacing: -.055em; text-wrap: balance; }
+.stage-message { max-inline-size: 48ch; margin: 1rem 0 0; color: rgba(255,255,255,.78); line-height: 1.55; }
+.stage-stat { display: grid; min-inline-size: 6rem; padding: 1rem; border: 1px solid rgba(255,255,255,.16); border-radius: 1rem; background: rgba(255,255,255,.08); text-align: center; }
+.stage-stat strong { font-size: 2rem; line-height: 1; }
+.stage-stat span { margin-block-start: .25rem; color: rgba(255,255,255,.68); font-size: .75rem; }
 
-.board-shell {
-  padding: clamp(1rem, 3vw, 2.5rem);
-}
+.result-banner { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; padding: 1.15rem; border: 1px solid var(--rb-line); border-radius: 1rem; background: white; }
+.result-banner.won { border-color: #aed3bb; background: #f4fbf6; }
+.result-icon { display: grid; inline-size: 2.75rem; block-size: 2.75rem; place-items: center; border-radius: 50%; background: var(--rb-turf-soft); color: var(--rb-turf-deep); font-size: 1.2rem; font-weight: 800; }
+.result-banner h2, .result-banner p { margin: 0; }
+.result-banner h2 { font-size: 1.2rem; letter-spacing: -.025em; }
+.result-banner p { margin-block-start: .2rem; color: var(--rb-muted); font-size: .9rem; }
 
-.race-command {
-  display: block;
-}
+.market { padding: clamp(1rem, 2.5vw, 1.5rem); border: 1px solid var(--rb-line); border-radius: 1.25rem; background: white; box-shadow: var(--rb-shadow-soft); }
+.market-head { display: flex; gap: 1rem; align-items: center; justify-content: space-between; margin-block-end: 1rem; }
+.market-head h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.04em; }
+.market-head p { margin: .2rem 0 0; color: var(--rb-muted); font-size: .85rem; }
+.market-status { padding: .4rem .65rem; border-radius: 999rem; background: var(--rb-panel); color: var(--rb-muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.market-status.open { background: var(--rb-turf-soft); color: var(--rb-turf-deep); }
+.runner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.runner-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .8rem; align-items: center; min-block-size: 4.65rem; padding: .85rem; border: 1px solid var(--rb-line); border-radius: .9rem; background: white; color: var(--rb-ink); cursor: pointer; text-align: start; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.runner-card:not(:disabled):hover { border-color: #9db9a7; background: #fbfcfb; transform: translateY(-1px); }
+.runner-card:disabled { cursor: default; opacity: .58; }
+.runner-card.selected { border-color: var(--rb-turf); background: var(--rb-turf-soft); opacity: 1; }
+.runner-card.winner { border-color: #d6b469; background: #fffbf2; opacity: 1; }
+.runner-main { display: grid; min-inline-size: 0; gap: .2rem; }
+.runner-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runner-main small { color: var(--rb-muted); font-size: .78rem; }
+.runner-cta { color: var(--rb-turf-deep); font-size: .76rem; font-weight: 700; }
 
-.race-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: clamp(1.25rem, 4vw, 3rem);
-  align-items: end;
-  margin-block: 1rem clamp(1.25rem, 3vw, 2rem);
-  padding: clamp(1.25rem, 4vw, 2.5rem);
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--rb-turf) 22%, var(--rb-line));
-  border-radius: var(--rb-radius-lg);
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--rb-turf-deep) 96%, black), color-mix(in oklch, var(--rb-turf) 78%, var(--rb-ink))),
-    var(--rb-turf-deep);
-  color: var(--rb-paper-strong);
-  box-shadow: var(--rb-shadow);
-}
+.waiting-room { display: grid; min-block-size: calc(100vh - 8rem); place-content: center; justify-items: center; padding: 2rem; text-align: center; }
+.waiting-mark { inline-size: 4.5rem; block-size: 4.5rem; margin-block-end: 1.25rem; overflow: hidden; border-radius: 1rem; }
+.waiting-mark img { inline-size: 100%; block-size: 100%; object-fit: contain; }
+.waiting-room h1 { max-inline-size: 15ch; margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -.06em; text-wrap: balance; }
+.waiting-room > p { max-inline-size: 38ch; margin: 1rem 0 0; color: var(--rb-muted); line-height: 1.55; }
+.waiting-partners { display: grid; gap: .75rem; justify-items: center; margin-block-start: 2rem; }
+.waiting-partners > p { margin: 0; color: var(--rb-subtle); font-size: .76rem; }
+.waiting-partners > div { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: center; }
+.waiting-partners img { inline-size: 5.25rem; block-size: 3.75rem; padding: .4rem; border: 1px solid var(--rb-line); border-radius: .75rem; background: white; object-fit: contain; }
 
-.race-copy {
-  max-inline-size: 48rem;
-}
+.modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(13,25,18,.52); backdrop-filter: blur(.35rem); }
+.change-modal { width: min(29rem, 100%); padding: 1.5rem; border-radius: 1.25rem; background: white; box-shadow: 0 2rem 6rem rgba(13,25,18,.25); }
+.change-modal h2 { margin: 0; font-size: 1.4rem; letter-spacing: -.03em; }
+.change-modal p { color: var(--rb-muted); line-height: 1.55; }
+.modal-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-block-start: 1.25rem; }
+@keyframes pulse { 70%,100% { box-shadow: 0 0 0 .7rem transparent; } }
 
-.ticket-topline,
-.status-chip,
-.runner-number {
-  font-family: var(--rb-font-display);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.race-copy h1 {
-  max-inline-size: 13ch;
-  margin: 0.45rem 0 0;
-  font-size: clamp(2.3rem, 7vw, 5.8rem);
-  line-height: 0.92;
-  letter-spacing: -0.08em;
-}
-
-.race-copy p {
-  max-inline-size: 58ch;
-  margin: 1rem 0 0;
-  color: color-mix(in oklch, var(--rb-paper-strong) 76%, var(--rb-amber));
-  line-height: 1.65;
-}
-
-.race-dial {
-  display: grid;
-  inline-size: clamp(8rem, 18vw, 13rem);
-  aspect-ratio: 1;
-  place-items: center;
-  align-content: center;
-  border-radius: 999rem;
-  background: color-mix(in oklch, var(--rb-paper-strong) 10%, transparent);
-}
-
-.race-dial span {
-  font-family: var(--rb-font-display);
-  font-size: clamp(2.5rem, 8vw, 5rem);
-  line-height: 0.9;
-  letter-spacing: -0.12em;
-}
-
-.board-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
-  gap: clamp(1rem, 3vw, 1.5rem);
-  align-items: start;
-}
-
-.market-panel,
-.ticket-panel {
-  border: 1px solid color-mix(in oklch, var(--rb-line) 76%, transparent);
-  border-radius: var(--rb-radius-lg);
-  background: color-mix(in oklch, var(--rb-paper-strong) 88%, transparent);
-  box-shadow: var(--rb-shadow-soft);
-}
-
-.market-panel {
-  padding: clamp(1rem, 3vw, 1.5rem);
-}
-
-.panel-heading {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-block-end: 1rem;
-}
-
-.panel-heading h2,
-.ticket-panel h2 {
-  margin: 0.25rem 0 0;
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  line-height: 1;
-  letter-spacing: -0.06em;
-}
-
-.status-chip {
-  display: inline-flex;
-  padding: 0.45rem 0.7rem;
-  border-radius: 999rem;
-  background: color-mix(in oklch, var(--rb-amber) 28%, var(--rb-paper));
-  color: var(--rb-turf-deep);
-  white-space: nowrap;
-}
-
-.runner-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 0.75rem;
-}
-
-.runner-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.85rem;
-  align-items: center;
-  min-block-size: 4.75rem;
-  padding: 0.85rem;
-  border: 1px solid color-mix(in oklch, var(--rb-line) 78%, transparent);
-  border-radius: 1.2rem;
-  background: color-mix(in oklch, var(--rb-paper-strong) 92%, var(--rb-panel));
-  color: var(--rb-ink);
-  cursor: pointer;
-  text-align: start;
-}
-
-.runner-card:hover,
-.runner-card:focus-visible {
-  border-color: color-mix(in oklch, var(--rb-turf) 50%, var(--rb-line));
-}
-
-.runner-card.selected {
-  border-color: var(--rb-turf);
-  background: color-mix(in oklch, var(--rb-turf) 14%, var(--rb-paper-strong));
-}
-
-.runner-number {
-  display: grid;
-  inline-size: 2.3rem;
-  block-size: 2.3rem;
-  place-items: center;
-  border-radius: 0.8rem;
-  background: var(--rb-turf-deep);
-  color: var(--rb-paper-strong);
-}
-
-.runner-name {
-  overflow: hidden;
-  font-size: 1rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.runner-action {
-  color: var(--rb-turf-deep);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
-.ticket-panel {
-  position: sticky;
-  inset-block-start: 6rem;
-  display: grid;
-  gap: 1rem;
-  padding: clamp(1rem, 3vw, 1.4rem);
-}
-
-.ticket-panel p {
-  margin: 0;
-  color: var(--rb-muted);
-  line-height: 1.55;
-}
-
-.ticket-selection {
-  display: grid;
-  gap: 0.2rem;
-  padding: 1rem;
-  border-radius: 1.2rem;
-  background: var(--rb-turf-deep);
-  color: var(--rb-paper-strong);
-}
-
-.ticket-selection strong {
-  font-size: 1.4rem;
-  line-height: 1.05;
-}
-
-@media (max-width: 64rem) {
-  .race-hero,
-  .board-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .race-dial {
-    justify-self: start;
-  }
-
-  .ticket-panel {
-    position: static;
-  }
-}
-
-@media (max-width: 38rem) {
-  .board-shell {
-    padding: 0.75rem;
-  }
-
-  .race-hero {
-    border-radius: 1.35rem;
-  }
-
-  .panel-heading {
-    display: grid;
-  }
-
-  .runner-grid {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 45rem) {
+  .live-shell { padding: .75rem; }
+  .race-stage { grid-template-columns: 1fr; gap: 1.25rem; min-block-size: auto; padding: 1.4rem; border-radius: 1.15rem; }
+  .race-name { margin-block-start: 1.5rem; }
+  .race-stage h1 { font-size: clamp(2rem, 10vw, 3rem); }
+  .stage-stat { grid-auto-flow: column; gap: .35rem; justify-content: start; min-inline-size: 0; inline-size: fit-content; align-items: baseline; }
+  .stage-stat strong { font-size: 1.25rem; }
+  .market { border-radius: 1rem; }
+  .market-head { align-items: start; }
+  .runner-grid { grid-template-columns: 1fr; }
+  .runner-card { grid-template-columns: minmax(0,1fr) auto; min-block-size: 4.65rem; }
+  .waiting-room { min-block-size: calc(100vh - 10rem); padding: 1rem; }
+  .waiting-room h1 { font-size: clamp(2.15rem, 12vw, 3.25rem); }
+  .modal-actions { display: grid; }
 }

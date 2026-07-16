@@ -50,19 +50,75 @@ export interface RaceAdminRequest {
   readonly state: RaceState | null;
 }
 
-export interface RaceEntryAdminResponse {
-  readonly id: number;
-  readonly raceId: number;
-  readonly raceName: string;
+export interface RaceControlEntry {
+  readonly entryId: number;
   readonly horseId: number;
   readonly horseName: string;
   readonly horseNumber: number;
   readonly rank: number | null;
+  readonly betCount: number;
 }
 
-export interface RaceEntryAdminRequest {
+export interface RaceControl {
+  readonly id: number;
+  readonly name: string;
+  readonly raceImgUrl: string | null;
+  readonly state: RaceState;
+  readonly visibleOnLive: boolean;
+  readonly entries: readonly RaceControlEntry[];
+  readonly totalBets: number;
+  readonly updatedAt: string;
+}
+
+export interface RaceHistorySummary {
   readonly raceId: number;
-  readonly horseId: number;
+  readonly raceName: string;
+  readonly finishedAt: string;
+  readonly runnerCount: number;
+  readonly totalVotes: number;
+  readonly winnerCount: number;
+  readonly winningHorseName: string;
+}
+
+export interface RaceHistoryResult {
+  readonly rank: number;
   readonly horseNumber: number;
-  readonly rank: number | null;
+  readonly horseName: string;
+  readonly voteCount: number;
+}
+
+export interface RaceHistoryVote {
+  readonly betId: number;
+  readonly userId: number;
+  readonly userDisplayName: string;
+  readonly userEmail: string;
+  readonly horseName: string;
+  readonly placedAt: string;
+  readonly state: 'WON' | 'LOST';
+}
+
+export interface RaceHistoryWinner {
+  readonly speedRank: number;
+  readonly userId: number;
+  readonly userDisplayName: string;
+  readonly userEmail: string;
+  readonly horseName: string;
+  readonly placedAt: string;
+}
+
+export interface RaceHistoryDetail {
+  readonly raceId: number;
+  readonly raceName: string;
+  readonly finishedAt: string;
+  readonly totalVotes: number;
+  readonly result: readonly RaceHistoryResult[];
+  readonly winners: readonly RaceHistoryWinner[];
+  readonly votes: readonly RaceHistoryVote[];
+}
+
+export interface PartnerAdminResponse {
+  readonly id: number;
+  readonly name: string;
+  readonly displayOnWaiting: boolean;
+  readonly logoUrl: string;
 }

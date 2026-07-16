@@ -1,30 +1,23 @@
 <main class="login-shell">
   <section class="login-brief" aria-label="Presentation Racebets">
-    <span class="eyebrow">Acces hippodrome</span>
-    <h1>Une entree nette dans l'experience live.</h1>
-    <p>
-      Connectez les joueurs, les quiz et l'admin avec un seul code d'acces. L'interface reste lisible meme sur mobile en tribune.
-    </p>
-    <div class="brief-grid" aria-hidden="true">
-      <span>JWT</span>
-      <span>Live</span>
-      <span>Admin</span>
-    </div>
+    <img src="/logo_le_bouscat.png" alt="" />
+    <h1>Vivez la course, simplement.</h1>
+    <p>Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.</p>
   </section>
 
   <section tuiCardLarge="compact" class="login-card">
     <header tuiHeader="h4">
       <hgroup tuiTitle>
-        <h1>{{ mode() === 'login' ? 'Connexion' : 'Creation de compte' }}</h1>
-        <p tuiSubtitle>{{ mode() === 'login' ? 'Retrouvez votre session live.' : 'Creez un acces joueur en quelques secondes.' }}</p>
+        <h1>{{ mode() === 'login' ? 'Bienvenue' : 'Créer un compte' }}</h1>
+        <p tuiSubtitle>{{ mode() === 'login' ? 'Connectez-vous pour rejoindre l’événement.' : 'Quelques informations suffisent pour participer.' }}</p>
       </hgroup>
     </header>
 
     <div class="mode-switch" role="tablist" aria-label="Mode d acces">
-      <button tuiButton type="button" size="s" [appearance]="mode() === 'login' ? 'primary' : 'secondary'" (click)="setMode('login')">
+      <button class="mode-option" type="button" [class.active]="mode() === 'login'" (click)="setMode('login')">
         Connexion
       </button>
-      <button tuiButton type="button" size="s" [appearance]="mode() === 'register' ? 'primary' : 'secondary'" (click)="setMode('register')">
+      <button class="mode-option" type="button" [class.active]="mode() === 'register'" (click)="setMode('register')">
         Inscription
       </button>
     </div>
@@ -43,7 +36,7 @@
         </label>
 
         <label class="field-copy">
-          Code d'acces
+          Code d’accès
           <tui-textfield>
             <input tuiInput formControlName="accessCode" type="password" placeholder="Votre code" autocomplete="current-password" />
           </tui-textfield>
@@ -57,9 +50,9 @@
       <form class="form" [formGroup]="registerForm" (ngSubmit)="register()">
         <div class="identity-grid">
           <label class="field-copy">
-            Prenom
+            Prénom
             <tui-textfield>
-              <input tuiInput formControlName="name" placeholder="Prenom" autocomplete="given-name" />
+              <input tuiInput formControlName="name" placeholder="Prénom" autocomplete="given-name" />
             </tui-textfield>
           </label>
 
@@ -86,14 +79,14 @@
         </label>
 
         <label class="field-copy">
-          Code d'acces
+          Code d’accès
           <tui-textfield>
-            <input tuiInput formControlName="accessCode" type="password" placeholder="8 caracteres minimum" autocomplete="new-password" />
+            <input tuiInput formControlName="accessCode" type="password" placeholder="8 caractères minimum" autocomplete="new-password" />
           </tui-textfield>
         </label>
 
         <button tuiButton type="submit" size="l" [disabled]="loading()">
-          {{ loading() ? 'Creation...' : 'Creer mon compte' }}
+          {{ loading() ? 'Création...' : 'Créer mon compte' }}
         </button>
       </form>
     }

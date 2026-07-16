@@ -1,0 +1,16 @@
+{
+  "name": "Racebets",
+  "short_name": "Racebets",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f0",
+  "theme_color": "#00552f",
+  "icons": [
+    {
+      "src": "/logo_le_bouscat.png",
+      "sizes": "600x600",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

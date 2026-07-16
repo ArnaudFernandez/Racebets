@@ -1,0 +1,37 @@
+<section class="history-panel">
+  <header class="history-heading">
+    <div>
+      <h2>Historique des courses</h2>
+      <p>Résultats, votes individuels et ordre de rapidité des gagnants.</p>
+    </div>
+    <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading()" (click)="load()">
+      Actualiser
+    </button>
+  </header>
+
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+  @if (loading()) { <p class="loading-line"><tui-loader size="s" /> Chargement de l’historique…</p> }
+
+  <div class="history-grid">
+    @for (race of races(); track race.raceId) {
+      <article class="history-card">
+        <div class="card-date">{{ formatDate(race.finishedAt) }}</div>
+        <h3>{{ race.raceName }}</h3>
+        <div class="winner-line">
+          <span class="trophy" aria-hidden="true">1</span>
+          <div><small>Cheval gagnant</small><strong>{{ race.winningHorseName }}</strong></div>
+        </div>
+        <dl>
+          <div><dt>Partants</dt><dd>{{ race.runnerCount }}</dd></div>
+          <div><dt>Votes</dt><dd>{{ race.totalVotes }}</dd></div>
+          <div><dt>Gagnants</dt><dd>{{ race.winnerCount }}</dd></div>
+        </dl>
+        <button tuiButton type="button" (click)="open(race.raceId)">Voir le détail</button>
+      </article>
+    } @empty {
+      @if (!loading()) {
+        <div class="empty-state"><strong>Aucune course terminée</strong><p>Les résultats publiés apparaîtront ici.</p></div>
+      }
+    }
+  </div>
+</section>

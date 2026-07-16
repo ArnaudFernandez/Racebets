@@ -1,29 +1,29 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TuiButton, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
+import { TuiButton, TuiDialog, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 import { TuiBadge, TuiTabs } from '@taiga-ui/kit';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { AdminUserPanelComponent } from '../admin-user-panel/admin-user-panel.component';
 import { AppFeaturePanelComponent } from '../app-feature-panel/app-feature-panel.component';
 import { AdminQuizPanelComponent } from '../../quiz/admin-quiz-panel/admin-quiz-panel.component';
+import { AdminRaceHistoryPanelComponent } from '../admin-race-history-panel/admin-race-history-panel.component';
+import { AdminPartnerPanelComponent } from '../admin-partner-panel/admin-partner-panel.component';
 import {
   HorseAdminRequest,
   HorseAdminResponse,
   RaceAdminRequest,
   RaceAdminResponse,
-  RaceEntryAdminRequest,
-  RaceEntryAdminResponse,
   RaceState
 } from '../models/admin-api.model';
 import { AdminApiService } from '../services/admin-api.service';
 
-type AdminSection = 'features' | 'horses' | 'races' | 'entries' | 'users' | 'quizzes';
+type AdminSection = 'features' | 'horses' | 'races' | 'history' | 'partners' | 'users' | 'quizzes';
 type DeleteTarget =
   | { readonly type: 'horse'; readonly id: number; readonly label: string }
-  | { readonly type: 'race'; readonly id: number; readonly label: string }
-  | { readonly type: 'raceEntry'; readonly id: number; readonly label: string };
+  | { readonly type: 'race'; readonly id: number; readonly label: string };
 
 interface BackendErrorResponse {
   readonly message: string;
@@ -31,28 +31,32 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [AdminQuizPanelComponent, AdminUserPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiHeader, TuiInput, TuiLoader, TuiTabs, TuiTitle],
+  imports: [AdminPartnerPanelComponent, AdminQuizPanelComponent, AdminRaceHistoryPanelComponent, AdminUserPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiTabs, TuiTitle],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminDashboardComponent {
   private readonly adminApi = inject(AdminApiService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly sections: readonly { readonly id: AdminSection; readonly label: string }[] = [
     { id: 'features', label: 'Affichage' },
     { id: 'horses', label: 'Chevaux' },
     { id: 'races', label: 'Courses' },
-    { id: 'entries', label: 'Participations' },
+    { id: 'history', label: 'Historique' },
+    { id: 'partners', label: 'Partenaires' },
     { id: 'users', label: 'Utilisateurs' },
     { id: 'quizzes', label: 'Quiz' }
   ];
 
-  readonly activeSection = signal<AdminSection>('features');
+  readonly activeSection = signal<AdminSection>(this.initialSection());
   readonly activeSectionIndex = computed(() => this.sections.findIndex((section) => section.id === this.activeSection()));
   readonly horses = signal<readonly HorseAdminResponse[]>([]);
   readonly races = signal<readonly RaceAdminResponse[]>([]);
-  readonly raceEntries = signal<readonly RaceEntryAdminResponse[]>([]);
+  readonly sortedHorses = computed(() => [...this.horses()].sort((left, right) => left.id - right.id));
+  readonly sortedRaces = computed(() => [...this.races()].sort((left, right) => left.id - right.id));
   readonly loading = signal(false);
   readonly loadingLabel = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -60,12 +64,7 @@ export class AdminDashboardComponent {
   readonly deleteTarget = signal<DeleteTarget | null>(null);
   readonly editingHorseId = signal<number | null>(null);
   readonly editingRaceId = signal<number | null>(null);
-  readonly editingRaceEntryId = signal<number | null>(null);
-
-  readonly selectedRaceId = signal<number | null>(null);
-  readonly sortedRaceEntries = computed(() =>
-    [...this.raceEntries()].sort((left, right) => left.raceName.localeCompare(right.raceName) || left.horseNumber - right.horseNumber)
-  );
+  readonly raceDialogOpen = signal(false);
 
   readonly raceStates: readonly RaceState[] = ['CREATED', 'STANDBY', 'BET_STARTING', 'BETTING', 'BET_CLOSED', 'FINISHED'];
 
@@ -85,13 +84,6 @@ export class AdminDashboardComponent {
     state: new FormControl<RaceState | null>('CREATED')
   });
 
-  readonly raceEntryForm = new FormGroup({
-    raceId: new FormControl<number | null>(null, Validators.required),
-    horseId: new FormControl<number | null>(null, Validators.required),
-    horseNumber: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
-    rank: new FormControl<number | null>(null, Validators.min(1))
-  });
-
   constructor() {
     void this.refreshAll();
   }
@@ -102,8 +94,6 @@ export class AdminDashboardComponent {
         return this.horses().length;
       case 'races':
         return this.races().length;
-      case 'entries':
-        return this.raceEntries().length;
       default:
         return null;
     }
@@ -123,30 +113,37 @@ export class AdminDashboardComponent {
     }
   }
 
+  protected raceStateLabel(state: RaceState): string {
+    return ({
+      CREATED: 'Brouillon',
+      STANDBY: 'À l’affiche',
+      BET_STARTING: 'Ouverture imminente',
+      BETTING: 'Paris ouverts',
+      BET_CLOSED: 'Paris clos',
+      FINISHED: 'Terminée'
+    })[state];
+  }
+
   protected setSection(section: AdminSection): void {
     this.activeSection.set(section);
     this.deleteTarget.set(null);
     this.clearMessages();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { section: section === 'features' ? null : section },
+      queryParamsHandling: 'merge'
+    });
   }
 
   protected async refreshAll(): Promise<void> {
     await this.runAction('Chargement des donnees admin...', async () => {
-      const [horses, races, entries] = await Promise.all([
+      const [horses, races] = await Promise.all([
         this.adminApi.findHorses(),
-        this.adminApi.findRaces(),
-        this.adminApi.findRaceEntries(this.selectedRaceId())
+        this.adminApi.findRaces()
       ]);
 
       this.horses.set(horses);
       this.races.set(races);
-      this.raceEntries.set(entries);
-    });
-  }
-
-  protected async filterEntriesByRace(raceId: string): Promise<void> {
-    this.selectedRaceId.set(this.parseNullableNumber(raceId));
-    await this.runAction('Chargement des participations...', async () => {
-      this.raceEntries.set(await this.adminApi.findRaceEntries(this.selectedRaceId()));
     });
   }
 
@@ -235,11 +232,26 @@ export class AdminDashboardComponent {
       state: race.state
     });
     this.setSection('races');
+    this.raceDialogOpen.set(true);
+  }
+
+  protected openRaceCreation(): void {
+    this.cancelRaceEdit();
+    this.raceDialogOpen.set(true);
+  }
+
+  protected closeRaceDialog(): void {
+    this.cancelRaceEdit();
+  }
+
+  protected openRace(race: RaceAdminResponse): void {
+    void this.router.navigate(['/admin/races', race.id]);
   }
 
   protected cancelRaceEdit(): void {
     this.editingRaceId.set(null);
     this.raceForm.reset({ name: '', raceImgUrl: null, state: 'CREATED' });
+    this.raceDialogOpen.set(false);
   }
 
   protected requestRaceDelete(race: RaceAdminResponse): void {
@@ -251,66 +263,6 @@ export class AdminDashboardComponent {
       await this.adminApi.deleteRace(id);
       this.races.set(await this.adminApi.findRaces());
       this.success.set('Course supprimee.');
-    });
-  }
-
-  protected async submitRaceEntry(): Promise<void> {
-    if (this.raceEntryForm.invalid) {
-      this.raceEntryForm.markAllAsTouched();
-      return;
-    }
-
-    const request = this.buildRaceEntryRequest();
-
-    if (request === null) {
-      return;
-    }
-
-    await this.runAction('Enregistrement de la participation...', async () => {
-      const id = this.editingRaceEntryId();
-
-      if (id === null) {
-        await this.adminApi.createRaceEntry(request);
-        this.success.set('Participation creee.');
-      } else {
-        await this.adminApi.updateRaceEntry(id, request);
-        this.success.set('Participation mise a jour.');
-      }
-
-      this.cancelRaceEntryEdit();
-      this.raceEntries.set(await this.adminApi.findRaceEntries(this.selectedRaceId()));
-    });
-  }
-
-  protected editRaceEntry(entry: RaceEntryAdminResponse): void {
-    this.editingRaceEntryId.set(entry.id);
-    this.raceEntryForm.setValue({
-      raceId: entry.raceId,
-      horseId: entry.horseId,
-      horseNumber: entry.horseNumber,
-      rank: entry.rank
-    });
-    this.setSection('entries');
-  }
-
-  protected cancelRaceEntryEdit(): void {
-    this.editingRaceEntryId.set(null);
-    this.raceEntryForm.reset({ raceId: null, horseId: null, horseNumber: null, rank: null });
-  }
-
-  protected requestRaceEntryDelete(entry: RaceEntryAdminResponse): void {
-    this.deleteTarget.set({
-      type: 'raceEntry',
-      id: entry.id,
-      label: `${entry.raceName} / dossard ${entry.horseNumber} / ${entry.horseName}`
-    });
-  }
-
-  private async deleteRaceEntry(id: number): Promise<void> {
-    await this.runAction('Suppression de la participation...', async () => {
-      await this.adminApi.deleteRaceEntry(id);
-      this.raceEntries.set(await this.adminApi.findRaceEntries(this.selectedRaceId()));
-      this.success.set('Participation supprimee.');
     });
   }
 
@@ -332,29 +284,7 @@ export class AdminDashboardComponent {
       return;
     }
 
-    if (target.type === 'race') {
-      await this.deleteRace(target.id);
-      return;
-    }
-
-    await this.deleteRaceEntry(target.id);
-  }
-
-  private buildRaceEntryRequest(): RaceEntryAdminRequest | null {
-    const raceId = this.raceEntryForm.controls.raceId.value;
-    const horseId = this.raceEntryForm.controls.horseId.value;
-    const horseNumber = this.raceEntryForm.controls.horseNumber.value;
-
-    if (raceId === null || horseId === null || horseNumber === null) {
-      return null;
-    }
-
-    return {
-      raceId,
-      horseId,
-      horseNumber,
-      rank: this.raceEntryForm.controls.rank.value
-    };
+    await this.deleteRace(target.id);
   }
 
   private async runAction(label: string, action: () => Promise<void>): Promise<void> {
@@ -385,10 +315,6 @@ export class AdminDashboardComponent {
     return value.trim();
   }
 
-  private parseNullableNumber(value: string): number | null {
-    return value === '' ? null : Number(value);
-  }
-
   private toErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401 || error.status === 403) {
@@ -417,5 +343,10 @@ export class AdminDashboardComponent {
 
   private isBackendErrorResponse(value: unknown): value is BackendErrorResponse {
     return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>)['message'] === 'string';
+  }
+
+  private initialSection(): AdminSection {
+    const section = this.route.snapshot.queryParamMap.get('section');
+    return this.sections.some((candidate) => candidate.id === section) ? section as AdminSection : 'features';
   }
 }

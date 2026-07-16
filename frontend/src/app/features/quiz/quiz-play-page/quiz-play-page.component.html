@@ -1,9 +1,8 @@
 <main class="quiz-shell">
   <section class="hero" tuiCardLarge="compact">
     <div>
-      <span class="eyebrow">Quiz live</span>
-      <h1>Repondre au bon moment, sans chercher l'interface.</h1>
-      <p>Choisissez une session ouverte. Les questions, verrouillages et scores suivent le rythme pilote par l'admin.</p>
+      <h1>Quiz live</h1>
+      <p>Répondez en direct et suivez votre classement.</p>
     </div>
     <span class="hero-count">{{ sessions().length }} live</span>
   </section>
@@ -16,7 +15,7 @@
     <section class="play-card" tuiCardLarge="compact">
       <header class="play-header" tuiHeader="body-m">
         <hgroup tuiTitle>
-          <span class="eyebrow">{{ phaseLabel(session.phase) }}</span>
+          <span class="phase-label">{{ phaseLabel(session.phase) }}</span>
           <h2>{{ session.title }}</h2>
           <p tuiSubtitle>{{ session.scores.length }} participant(s)</p>
         </hgroup>
@@ -25,14 +24,13 @@
 
       @if (!session.joined && session.phase !== 'FINISHED') {
         <div class="center-state">
-          <strong>Entree requise</strong>
-          <p>Rejoignez la session pour activer les reponses.</p>
+          <p>Rejoignez la session et prenez part au quiz !</p>
           <button tuiButton type="button" [disabled]="loading()" (click)="join()">Rejoindre</button>
         </div>
       } @else if (session.phase === 'OPENING') {
         <div class="empty-state">
-          <strong>Session ouverte</strong>
-          <p>Le lancement arrive depuis le poste admin.</p>
+          <strong>Vous êtes inscrit.</strong>
+          <p>Cet écran se mettra automatiquement à jour lorsque le quiz sera lancé.</p>
         </div>
       } @else {
         @if (session.currentQuestion; as question) {
@@ -53,12 +51,11 @@
             }
 
             @if (session.phase === 'QUESTION_OPEN') {
-              <div class="answer-grid" role="list">
+              <div class="answer-grid">
                 @for (answer of question.answers; track answer.id; let index = $index) {
                   <button
                     class="answer-card"
                     type="button"
-                    role="listitem"
                     [class.selected]="session.selectedAnswerId === answer.id"
                     [disabled]="loading() || session.selectedAnswerId !== null"
                     (click)="submitAnswer(answer.id)"
@@ -74,7 +71,7 @@
             }
 
             @if (session.phase === 'QUESTION_LOCKED') {
-              <div class="empty-state"><strong>Reponses fermees</strong><p>La revelation est imminente.</p></div>
+              <div class="empty-state"><strong>C'est terminé !</strong><p>La réponse était ...</p></div>
             }
 
             @if (session.phase === 'ANSWER_REVEALED' || session.phase === 'SCOREBOARD') {
@@ -107,7 +104,7 @@
     <section class="sessions-grid">
       @for (session of sessions(); track session.id) {
         <article class="session-card" tuiCardLarge="compact">
-          <span class="eyebrow">{{ phaseLabel(session.phase) }}</span>
+          <span class="phase-label">{{ phaseLabel(session.phase) }}</span>
           <h2>{{ session.title }}</h2>
           <p>{{ session.participantCount }} participant(s)</p>
           <button tuiButton type="button" size="s" (click)="selectSession(session)">Entrer</button>
@@ -115,7 +112,7 @@
       } @empty {
         <div class="empty-state wide">
           <strong>Aucune session quiz ouverte</strong>
-          <p>Revenez quand l'admin lance un quiz live.</p>
+          <p>Cet écran se mettra automatiquement à jour lorsque le quiz sera disponible.</p>
         </div>
       }
     </section>

@@ -23,15 +23,15 @@
     <article tuiCardLarge="compact">
       <header tuiHeader="body-m">
         <hgroup tuiTitle>
-          <h2>{{ editingUserId() === null ? 'Nouvel utilisateur' : 'Modifier l utilisateur' }}</h2>
-          <p tuiSubtitle>Creation, activation et roles applicatifs</p>
+          <h2>{{ editingUserId() === null ? 'Nouvel utilisateur' : 'Modifier l’utilisateur' }}</h2>
+          <p tuiSubtitle>Compte, accès et rôles</p>
         </hgroup>
       </header>
 
       <form class="form" [formGroup]="userForm" (ngSubmit)="submit()">
         <div class="two-cols">
           <tui-textfield>
-            <input tuiInput formControlName="name" placeholder="Prenom" autocomplete="given-name" />
+            <input tuiInput formControlName="name" placeholder="Prénom" autocomplete="given-name" />
           </tui-textfield>
           <tui-textfield>
             <input tuiInput formControlName="surname" placeholder="Nom" autocomplete="family-name" />
@@ -47,24 +47,24 @@
         </tui-textfield>
 
         <tui-textfield>
-          <input tuiInput formControlName="accessCode" type="password" [placeholder]="editingUserId() === null ? 'Code d acces obligatoire' : 'Nouveau code d acces optionnel'" autocomplete="new-password" />
+          <input tuiInput formControlName="accessCode" type="password" [placeholder]="editingUserId() === null ? 'Code d’accès obligatoire' : 'Nouveau code d’accès optionnel'" autocomplete="new-password" />
         </tui-textfield>
 
         <label class="check-row">
-          <span>Marque present</span>
+          <span>Présent à l’événement</span>
           <input tuiSwitch type="checkbox" formControlName="present" />
         </label>
 
         <fieldset class="roles">
-          <legend>Roles</legend>
+          <legend>Rôles</legend>
           <label><input tuiCheckbox type="checkbox" formControlName="user" /> USER</label>
           <label><input tuiCheckbox type="checkbox" formControlName="vip" /> VIP</label>
           <label><input tuiCheckbox type="checkbox" formControlName="admin" /> ADMIN</label>
         </fieldset>
 
         <div class="form-actions">
-          <button tuiButton type="submit" size="s" [disabled]="loading()">{{ editingUserId() === null ? 'Creer' : 'Enregistrer' }}</button>
-          <button tuiButton type="button" size="s" appearance="secondary" (click)="reset()">Reinitialiser</button>
+          <button tuiButton type="submit" size="s" [disabled]="loading()">{{ editingUserId() === null ? 'Créer' : 'Enregistrer' }}</button>
+          <button tuiButton type="button" size="s" appearance="secondary" (click)="reset()">Réinitialiser</button>
         </div>
       </form>
     </article>
@@ -75,7 +75,7 @@
           <h2>Utilisateurs</h2>
           <p tuiSubtitle>{{ users().length }} compte(s)</p>
         </hgroup>
-        <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Rafraichir</button>
+        <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Actualiser</button>
       </header>
 
       <div class="table-wrap">

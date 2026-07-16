@@ -1,0 +1,57 @@
+<section class="partner-panel">
+  <header class="partner-hero">
+    <div><h2>Partenaires</h2><p>Entreprises présentées pendant l’attente de la prochaine course.</p></div>
+    <span class="partner-count"><strong>{{ partners().length }}</strong> partenaire{{ partners().length > 1 ? 's' : '' }}</span>
+  </header>
+
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+  @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
+
+  <div class="partner-grid">
+    <article class="partner-form-card">
+      <h3>{{ editingId() === null ? 'Ajouter une entreprise' : 'Modifier le partenaire' }}</h3>
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <tui-textfield><input tuiInput formControlName="name" placeholder="Nom de l’entreprise" /></tui-textfield>
+
+        <label class="file-field">
+          <span>{{ editingId() === null ? 'Logo du partenaire' : 'Nouveau logo (optionnel)' }}</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" (change)="selectLogo($event)" />
+          <small>{{ selectedLogo()?.name ?? 'PNG, JPEG ou WebP · 2 Mo maximum' }}</small>
+        </label>
+
+        <label class="visibility-switch">
+          <input tuiSwitch type="checkbox" formControlName="displayOnWaiting" />
+          <span><strong>Afficher ce logo</strong><small>Visible lorsque la prochaine course se prépare.</small></span>
+        </label>
+
+        <div class="form-actions">
+          <button tuiButton type="submit" [disabled]="loading()">{{ editingId() === null ? 'Créer le partenaire' : 'Enregistrer' }}</button>
+          @if (editingId() !== null) { <button tuiButton type="button" appearance="secondary" (click)="reset()">Annuler</button> }
+        </div>
+      </form>
+    </article>
+
+    <section class="partner-list" aria-label="Partenaires enregistrés">
+      @if (loading() && partners().length === 0) { <div class="loading-partners"><tui-loader size="l" /></div> }
+      @for (partner of sortedPartners(); track partner.id) {
+        <article class="partner-card" [class.hidden-partner]="!partner.displayOnWaiting">
+          <img [src]="partner.logoUrl" [alt]="'Logo ' + partner.name" />
+          <div class="partner-copy"><span>#{{ partner.id }}</span><h3>{{ partner.name }}</h3><small>{{ partner.displayOnWaiting ? 'Affiché sur l’écran d’attente' : 'Masqué' }}</small></div>
+          <div class="partner-actions">
+            <button tuiButton type="button" size="xs" appearance="secondary" (click)="edit(partner)">Modifier</button>
+            <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="deleteTarget.set(partner)">Supprimer</button>
+          </div>
+        </article>
+      } @empty {
+        @if (!loading()) { <div class="empty-state"><strong>Aucun partenaire</strong><p>Ajoutez une entreprise et son logo pour commencer.</p></div> }
+      }
+    </section>
+  </div>
+
+  @if (deleteTarget(); as target) {
+    <section class="delete-confirm" role="alertdialog" aria-label="Confirmer la suppression du partenaire">
+      <p>Supprimer définitivement <strong>{{ target.name }}</strong> ?</p>
+      <div><button tuiButton type="button" appearance="secondary" (click)="deleteTarget.set(null)">Annuler</button><button tuiButton type="button" appearance="secondary-destructive" (click)="confirmDelete()">Supprimer</button></div>
+    </section>
+  }
+</section>

@@ -1,81 +1,110 @@
-<main class="board-shell">
-  <app-realtime-card
-    #board
-    class="race-command"
-    [title]="race().name"
-    [subtitle]="race().track + ' - marche live synchronise'"
-  >
-    <div class="race-hero" aria-label="Etat du marche">
-      <div class="race-copy">
-        <span class="eyebrow">Live betting desk</span>
-        <h1>Choisir vite, confirmer sans friction.</h1>
-        <p>
-          Les partants sont charges depuis le snapshot backend. La selection reste locale tant que le moteur temps reel
-          Lot 3 n'est pas branche.
-        </p>
-      </div>
-      <div class="race-dial" aria-hidden="true">
-        <span>{{ runners().length }}</span>
-        <small>partants</small>
-      </div>
-    </div>
-
-    <div class="board-grid">
-      <section class="market-panel" aria-labelledby="market-title">
-        <div class="panel-heading">
-          <div>
-            <span class="eyebrow">Marche actif</span>
-            <h2 id="market-title">Partants disponibles</h2>
-          </div>
-          <span class="status-chip">{{ runners().length }} synchro</span>
+<main class="live-shell">
+  @if (race(); as currentRace) {
+    <section class="race-stage" [class]="'state-' + currentRace.state.toLowerCase()">
+      <div class="stage-copy">
+        <div class="live-kicker">
+          <span class="pulse" [class.active]="currentRace.state === 'BETTING'"></span>
+          {{ currentRace.state === 'FINISHED' ? 'Course terminée' : 'Paris live' }}
         </div>
+        <p class="race-name">{{ currentRace.raceName }}</p>
+        <h1>{{ stateTitle(currentRace) }}</h1>
+        <p class="stage-message">{{ stateMessage(currentRace) }}</p>
+      </div>
+      <div class="stage-stat" aria-label="Nombre de paris">
+        <strong>{{ currentRace.totalBets }}</strong>
+        <span>pari{{ currentRace.totalBets > 1 ? 's' : '' }}</span>
+      </div>
+    </section>
 
-        @if (runners().length > 0) {
-          <div class="runner-grid" role="list">
-            @for (runner of runners(); track runner.runnerId; let index = $index) {
-              <button
-                class="runner-card"
-                type="button"
-                role="listitem"
-                [class.selected]="userBet().selection?.runnerId === runner.runnerId"
-                (click)="selectRunner(runner)"
-              >
-                <span class="runner-number">{{ index + 1 }}</span>
-                <span class="runner-name">{{ runner.runnerName }}</span>
-                <span class="runner-action">Parier</span>
-              </button>
+    @if (currentRace.state === 'FINISHED' && currentRace.userBet; as bet) {
+      <section class="result-banner" [class.won]="bet.state === 'WON'" [class.lost]="bet.state === 'LOST'">
+        <div class="result-icon" aria-hidden="true">{{ bet.state === 'WON' ? '✓' : '—' }}</div>
+        <div>
+          @if (bet.state === 'WON') {
+            <h2>Gagné avec {{ bet.horseName }}</h2>
+            <p>Vous êtes <strong>{{ bet.speedRank }}{{ bet.speedRank === 1 ? 'er' : 'e' }}</strong> parmi les votants du cheval gagnant.</p>
+          } @else {
+            <h2>Pas cette fois</h2>
+            <p>Votre choix, {{ bet.horseName }}, n’a pas remporté cette course.</p>
+          }
+        </div>
+      </section>
+    }
+
+    @if (actionError(); as message) {
+      <p class="message error" role="alert">{{ message }}</p>
+    }
+
+    <section class="market" aria-labelledby="market-title">
+      <header class="market-head">
+        <div>
+            <h2 id="market-title">
+              {{ currentRace.state === 'FINISHED' ? 'Classement final' : 'Chevaux partants' }}
+            </h2>
+            <p>{{ currentRace.runners.length }} {{ currentRace.runners.length > 1 ? 'chevaux' : 'cheval' }}</p>
+        </div>
+        <span class="market-status" [class.open]="bettingOpen()">
+          {{ bettingOpen() ? 'Votes ouverts' : currentRace.state === 'FINISHED' ? 'Résultat publié' : 'Votes fermés' }}
+        </span>
+      </header>
+
+      <div class="runner-grid">
+        @for (runner of currentRace.runners; track runner.entryId) {
+          <button
+            class="runner-card"
+            type="button"
+            [class.selected]="currentRace.userBet?.entryId === runner.entryId"
+            [class.winner]="runner.rank === 1"
+            [disabled]="!bettingOpen() || pendingEntryId() !== null"
+            (click)="selectRunner(runner)"
+          >
+            <span class="runner-main">
+              <strong>{{ runner.horseName }}</strong>
+              @if (currentRace.state === 'FINISHED') {
+                <small>{{ runner.rank }}{{ runner.rank === 1 ? 'er' : 'e' }} à l’arrivée</small>
+              } @else if (currentRace.userBet?.entryId === runner.entryId) {
+                <small>Votre sélection · {{ formatTime(currentRace.userBet!.placedAt) }}</small>
+              }
+            </span>
+            <span class="runner-cta">
+              @if (pendingEntryId() === runner.entryId) { En cours… }
+              @else if (runner.rank === 1) { Gagnant }
+              @else if (currentRace.userBet?.entryId === runner.entryId) { Sélectionné }
+              @else if (bettingOpen()) { Parier }
+              @else {}
+            </span>
+          </button>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="waiting-room">
+      <div class="waiting-mark" aria-hidden="true"><img src="/logo_le_bouscat.png" alt="" /></div>
+      <h1>La prochaine course se prépare.</h1>
+      <p>Restez sur cet écran, il se mettra à jour automatiquement.</p>
+      @if (partners().length > 0) {
+        <section class="waiting-partners" aria-label="Partenaires de l’événement">
+          <p>Avec le soutien de</p>
+          <div>
+            @for (partner of partners(); track partner.id) {
+              <img [src]="partner.logoUrl" [alt]="partner.name" [title]="partner.name" />
             }
           </div>
-        } @else {
-          <div class="empty-state">
-            <strong>Snapshot en attente</strong>
-            <p>Le poste affichera les partants des que `/api/realtime/race-betting` repond.</p>
-          </div>
-        }
-      </section>
-
-      <aside class="ticket-panel" aria-labelledby="ticket-title">
-        <div class="ticket-topline">Ticket personnel</div>
-        <h2 id="ticket-title">Votre pari</h2>
-        <p>Un seul cheval par utilisateur et par course. La confirmation visuelle est immediate.</p>
-
-        @if (userBet().selection; as selection) {
-          <div class="ticket-selection">
-            <span>Selection</span>
-            <strong>{{ selection.runnerName }}</strong>
-            <small>Enregistre a {{ formatTime(selection.placedAt) }}</small>
-          </div>
-
-          <button tuiButton type="button" appearance="secondary" (click)="clearBet()">
-            Annuler la selection
-          </button>
-        } @else {
-          <div class="empty-state compact">
-            <strong>Aucun cheval choisi</strong>
-            <p>Touchez un partant pour preparer le ticket.</p>
-          </div>
-        }
-      </aside>
-    </div>
-  </app-realtime-card>
+        </section>
+      }
+    </section>
+  }
 </main>
+
+@if (changeCandidate(); as candidate) {
+  <div class="modal-backdrop">
+    <section class="change-modal" role="alertdialog" aria-modal="true" aria-labelledby="change-title">
+      <h2 id="change-title">Choisir {{ candidate.horseName }} ?</h2>
+      <p>Votre premier horodatage sera définitivement perdu. Votre position de rapidité repartira à l’heure de ce nouveau vote.</p>
+      <div class="modal-actions">
+        <button tuiButton type="button" (click)="confirmChange()">Confirmer le changement</button>
+        <button tuiButton type="button" appearance="secondary" (click)="cancelChange()">Garder mon choix</button>
+      </div>
+    </section>
+  </div>
+}

@@ -2,40 +2,43 @@
   <div class="app-frame">
     <header class="app-topbar">
       <a class="brand" routerLink="/" aria-label="Racebets accueil">
-        <span class="brand-mark">RB</span>
+        <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
         <span>
           <strong>Racebets</strong>
-          <small>Live race ops</small>
         </span>
       </a>
 
       <nav class="app-nav desktop-nav" aria-label="Navigation principale">
         @if (features.bettingEnabled()) {
-          <a tuiButton routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-            Paris live
+          <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Paris
           </a>
         }
         @if (features.quizEnabled()) {
-          <a tuiButton routerLink="/quiz" routerLinkActive="active">
-            Quiz live
+          <a class="nav-link" routerLink="/quiz" routerLinkActive="active">
+            Quiz
+          </a>
+        }
+        @if (betHistory.hasHistory()) {
+          <a class="nav-link" routerLink="/history" routerLinkActive="active">
+            Historique
           </a>
         }
         @if (auth.isAdmin()) {
-          <a tuiButton routerLink="/admin" routerLinkActive="active">
-            Admin
+          <a class="nav-link" routerLink="/admin" routerLinkActive="active">
+            Administration
           </a>
         }
       </nav>
 
       <div class="session-box">
-        <span class="session-dot" [class.online]="auth.isAuthenticated()"></span>
-        <span>{{ auth.isAuthenticated() ? 'Session active' : 'Invite' }}</span>
         @if (auth.isAuthenticated()) {
-          <button tuiButton type="button" size="s" appearance="secondary" (click)="logout()">
-            Sortir
+          <span class="user-name">{{ auth.user()?.name }}</span>
+          <button class="logout-trigger" type="button" (click)="requestLogout()">
+            Déconnexion
           </button>
         } @else {
-          <a tuiButton routerLink="/login" routerLinkActive="active" size="s" appearance="secondary">
+          <a class="login-link" routerLink="/login" routerLinkActive="active">
             Connexion
           </a>
         }
@@ -55,6 +58,11 @@
           <span>Quiz</span>
         </a>
       }
+      @if (betHistory.hasHistory()) {
+        <a routerLink="/history" routerLinkActive="active">
+          <span>Historique</span>
+        </a>
+      }
       @if (auth.isAdmin()) {
         <a routerLink="/admin" routerLinkActive="active">
           <span>Admin</span>
@@ -64,9 +72,20 @@
         <a routerLink="/login" routerLinkActive="active">
           <span>Login</span>
         </a>
-      } @else {
-        <button type="button" (click)="logout()">Sortir</button>
       }
     </nav>
+
+    @if (logoutDialogOpen()) {
+      <div class="logout-backdrop">
+        <section class="logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title">
+          <h2 id="logout-title">Confirmer la déconnexion</h2>
+          <p>Vous devrez saisir à nouveau vos identifiants pour accéder à votre session.</p>
+          <div>
+            <button tuiButton type="button" appearance="secondary" (click)="logoutDialogOpen.set(false)">Annuler</button>
+            <button tuiButton type="button" appearance="secondary-destructive" (click)="confirmLogout()">Se déconnecter</button>
+          </div>
+        </section>
+      </div>
+    }
   </div>
 </tui-root>

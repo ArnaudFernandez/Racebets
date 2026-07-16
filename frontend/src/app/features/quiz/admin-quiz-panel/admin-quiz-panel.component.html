@@ -24,7 +24,6 @@
       <header tuiHeader="body-m">
         <hgroup tuiTitle>
           <h2>{{ editingQuizSetId() === null ? 'Nouvel ensemble de questions' : 'Modifier l ensemble' }}</h2>
-          <p tuiSubtitle>Images png/jpeg/webp, une seule bonne reponse par question</p>
         </hgroup>
       </header>
 
@@ -105,7 +104,7 @@
     <article tuiCardLarge="compact">
       <header tuiHeader="body-m">
         <hgroup tuiTitle>
-          <h2>Ensembles sauvegardes</h2>
+          <h2>Ensembles sauvegardés</h2>
           <p tuiSubtitle>{{ quizSets().length }} quiz</p>
         </hgroup>
         <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Rafraichir</button>
@@ -140,7 +139,6 @@
     <header tuiHeader="body-m">
       <hgroup tuiTitle>
         <h2>Sessions live</h2>
-        <p tuiSubtitle>Controle sequentiel des questions</p>
       </hgroup>
     </header>
 

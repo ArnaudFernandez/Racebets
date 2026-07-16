@@ -1,0 +1,71 @@
+<main class="detail-shell">
+  <a class="back-link" routerLink="/admin" [queryParams]="{section: 'history'}">← Retour à l’historique</a>
+
+  @if (history(); as race) {
+    <header class="detail-hero">
+      <div>
+        <span class="detail-meta">Course #{{ race.raceId }}</span>
+        <h1>{{ race.raceName }}</h1>
+        <p>Terminée le {{ formatDate(race.finishedAt) }}</p>
+      </div>
+      <div class="hero-total"><strong>{{ race.totalVotes }}</strong><span>vote{{ race.totalVotes > 1 ? 's' : '' }}</span></div>
+    </header>
+
+    <section class="result-strip" aria-labelledby="result-title">
+      <div class="section-title"><h2 id="result-title">Ordre d’arrivée</h2></div>
+      <ol>
+        @for (entry of race.result; track entry.rank) {
+          <li [class.winner]="entry.rank === 1">
+            <span class="official-rank">{{ entry.rank }}</span>
+            <span class="horse-name">{{ entry.horseName }}</span>
+            <span class="vote-count">{{ entry.voteCount }} vote{{ entry.voteCount > 1 ? 's' : '' }}</span>
+          </li>
+        }
+      </ol>
+    </section>
+
+    <section class="leaderboard" aria-labelledby="winners-title">
+      <div class="section-title">
+        <h2 id="winners-title">Gagnants</h2>
+        <p>{{ race.winners.length }} participant{{ race.winners.length > 1 ? 's ont' : ' a' }} trouvé le cheval gagnant.</p>
+      </div>
+      <div class="winner-list">
+        @for (winner of race.winners; track winner.userId) {
+          <article class="winner-row" [class.podium]="winner.speedRank <= 3">
+            <span class="speed-rank">{{ winner.speedRank }}</span>
+            <span class="winner-person"><strong>{{ winner.userDisplayName }}</strong><small>{{ winner.userEmail }}</small></span>
+            <span class="winner-horse">{{ winner.horseName }}</span>
+            <time [attr.datetime]="winner.placedAt">{{ formatTime(winner.placedAt) }}</time>
+          </article>
+        } @empty {
+          <div class="empty-state"><strong>Aucun gagnant</strong><p>Aucun participant n’avait choisi le cheval arrivé premier.</p></div>
+        }
+      </div>
+    </section>
+
+    <section class="votes-panel" aria-labelledby="votes-title">
+      <div class="section-title"><h2 id="votes-title">Tous les votes</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Participant</th><th>Cheval choisi</th><th>Heure du vote</th><th>Résultat</th></tr></thead>
+          <tbody>
+            @for (vote of race.votes; track vote.betId) {
+              <tr>
+                <td data-label="Participant"><strong>{{ vote.userDisplayName }}</strong><small>{{ vote.userEmail }}</small></td>
+                <td data-label="Cheval">{{ vote.horseName }}</td>
+                <td data-label="Heure"><time [attr.datetime]="vote.placedAt">{{ formatTime(vote.placedAt) }}</time></td>
+                <td data-label="Résultat"><span class="result-chip" [class.won]="vote.state === 'WON'">{{ vote.state === 'WON' ? 'Gagné' : 'Perdu' }}</span></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="empty">Aucun vote enregistré pour cette course.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @else if (loading()) {
+    <section class="loading-page"><tui-loader size="xl" /><p>Chargement de l’archive…</p></section>
+  } @else {
+    <section class="loading-page"><p class="message error" role="alert">{{ error() }}</p><a tuiButton routerLink="/admin">Retour à l’administration</a></section>
+  }
+</main>

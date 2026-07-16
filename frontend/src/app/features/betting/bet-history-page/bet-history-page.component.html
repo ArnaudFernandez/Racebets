@@ -1,0 +1,44 @@
+<main class="history-shell">
+  <header class="history-hero">
+    <div>
+      <h1>Historique des paris</h1>
+      <p>Vos courses terminées et vos résultats.</p>
+    </div>
+    <strong>{{ history().length }}</strong>
+  </header>
+
+  @if (loading()) {
+    <section class="loading-state"><tui-loader size="xl" /><p>Chargement de votre historique…</p></section>
+  } @else {
+    @if (error(); as message) {
+      <p class="message error" role="alert">{{ message }}</p>
+    } @else {
+      <section class="history-list" aria-label="Courses auxquelles vous avez participé">
+      @for (entry of history(); track entry.raceId) {
+        <article class="history-card" [class.won]="entry.state === 'WON'">
+          <header>
+            <div>
+              <time [attr.datetime]="entry.finishedAt">{{ formatDate(entry.finishedAt) }}</time>
+              <h2>{{ entry.raceName }}</h2>
+            </div>
+            <span class="outcome" [class.won]="entry.state === 'WON'">
+              {{ entry.state === 'WON' ? 'Gagné' : 'Perdu' }}
+            </span>
+          </header>
+
+          <dl>
+            <div><dt>Votre cheval</dt><dd>{{ entry.selectedHorseName }}</dd></div>
+            <div><dt>Cheval gagnant</dt><dd>{{ entry.winningHorseName }}</dd></div>
+            <div><dt>Heure du vote</dt><dd>{{ formatTime(entry.placedAt) }}</dd></div>
+            @if (entry.speedRank !== null) {
+              <div class="speed-place"><dt>Votre place parmi les gagnants</dt><dd>#{{ entry.speedRank }}</dd></div>
+            }
+          </dl>
+        </article>
+      } @empty {
+        <div class="empty-state"><strong>Votre première course vous attend</strong><p>L’historique apparaîtra ici dès qu’une course à laquelle vous avez participé sera terminée.</p></div>
+      }
+      </section>
+    }
+  }
+</main>

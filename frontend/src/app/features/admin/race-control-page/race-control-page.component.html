@@ -1,0 +1,163 @@
+<main class="control-shell">
+  <a class="back-link" routerLink="/admin">← Retour aux courses</a>
+
+  @if (race(); as currentRace) {
+    <header class="control-hero">
+      <div>
+        <span class="control-meta">Course #{{ currentRace.id }}</span>
+        <h1>{{ currentRace.name }}</h1>
+        <div class="state-line">
+          <span class="state-dot" [class.live]="currentRace.state === 'BETTING'"></span>
+          <strong>{{ stateLabel(currentRace.state) }}</strong>
+          <span>· {{ currentRace.entries.length }} partants</span>
+          <span>· {{ currentRace.totalBets }} paris</span>
+        </div>
+      </div>
+      @if (currentRace.state === 'FINISHED' && currentRace.visibleOnLive) {
+        <button tuiButton type="button" size="l" appearance="secondary" [disabled]="loading()" (click)="clearLive()">
+          Retirer de l’affiche
+        </button>
+      } @else if (currentRace.state === 'FINISHED') {
+        <span class="completed-badge" tuiBadge size="l" appearance="positive">Retirée de l’affiche</span>
+      }
+    </header>
+
+    <ol class="workflow" aria-label="Déroulé de la course">
+      @for (step of ['CREATED', 'STANDBY', 'BET_STARTING', 'BETTING', 'BET_CLOSED', 'FINISHED']; track step; let index = $index) {
+        <li [class.current]="step === currentRace.state" [class.done]="index < ['CREATED', 'STANDBY', 'BET_STARTING', 'BETTING', 'BET_CLOSED', 'FINISHED'].indexOf(currentRace.state)">
+          <span>{{ index + 1 }}</span>
+          <small>{{ stateLabel($any(step)) }}</small>
+        </li>
+      }
+    </ol>
+
+    @if (nextState()) {
+      <section class="workflow-advance" aria-label="Passage à l’étape suivante">
+        <div>
+          <span class="next-label">Étape suivante</span>
+          <strong>{{ nextActionLabel(currentRace.state) }}</strong>
+          <small>{{ nextActionHint(currentRace.state) }}</small>
+        </div>
+        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="advance()">
+          {{ nextActionLabel(currentRace.state) }} <span aria-hidden="true">→</span>
+        </button>
+      </section>
+    }
+
+    @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+    @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
+    @if (loading()) { <p class="loading"><tui-loader size="s" /> Mise à jour de la course…</p> }
+
+    @if (currentRace.state === 'CREATED') {
+      <section class="panel runner-picker-panel">
+        <header class="panel-head">
+          <div>
+            <h2>Choisissez les partants</h2>
+          </div>
+          <span class="selection-count">{{ currentRace.entries.length }} sélectionné{{ currentRace.entries.length > 1 ? 's' : '' }}</span>
+        </header>
+        <p class="panel-copy">Sélectionnez les chevaux engagés dans cette course.</p>
+
+        <div class="horse-picker" role="group" aria-label="Chevaux disponibles">
+          @for (horse of horses(); track horse.id) {
+            <button
+              class="horse-choice"
+              type="button"
+              role="checkbox"
+              [attr.aria-checked]="isSelected(horse.id)"
+              [class.selected]="isSelected(horse.id)"
+              [disabled]="loading()"
+              (click)="toggleRunner(horse.id)"
+            >
+              <span class="choice-check" aria-hidden="true">{{ isSelected(horse.id) ? '✓' : '+' }}</span>
+              <span class="choice-name">{{ horse.name }}</span>
+              <span class="choice-action">{{ isSelected(horse.id) ? 'Sélectionné' : 'Ajouter' }}</span>
+            </button>
+          } @empty {
+            <div class="empty-state"><strong>Aucun cheval disponible</strong><p>Créez d’abord vos chevaux depuis l’administration.</p></div>
+          }
+        </div>
+      </section>
+    } @else {
+    <div class="control-grid">
+      <section class="panel live-panel">
+        <header class="panel-head">
+          <div>
+            <h2>Paris par cheval</h2>
+          </div>
+          <span class="refresh-note">Actualisé automatiquement</span>
+        </header>
+
+        <div class="bet-list">
+          @for (entry of currentRace.entries; track entry.entryId) {
+            <article class="bet-row">
+              <div class="bet-detail">
+                <div><strong>{{ entry.horseName }}</strong><span>{{ entry.betCount }} vote{{ entry.betCount > 1 ? 's' : '' }}</span></div>
+                <div class="bet-meter"><span [style.width.%]="percent(entry)"></span></div>
+              </div>
+            </article>
+          } @empty {
+            <div class="empty-state"><strong>Aucun partant</strong><p>Ajoutez les participations avant de mettre cette course à l’affiche.</p></div>
+          }
+        </div>
+      </section>
+
+      <section class="panel result-panel">
+        <header class="panel-head">
+          <div>
+            <h2>Arrivée des chevaux</h2>
+          </div>
+        </header>
+        <p class="panel-copy">Placez les chevaux dans leur ordre d’arrivée. Le premier sera déclaré gagnant.</p>
+
+        <ol class="arrival-list">
+          @for (entry of orderedEntries(); track entry.entryId; let index = $index) {
+            <li>
+              <span class="rank">{{ index + 1 }}</span>
+              <span class="arrival-horse"><strong>{{ entry.horseName }}</strong></span>
+              @if (currentRace.state === 'BET_CLOSED') {
+                <span class="order-actions">
+                  <button type="button" [disabled]="index === 0" aria-label="Monter dans le classement" (click)="move(entry.entryId, -1)">↑</button>
+                  <button type="button" [disabled]="index === orderedEntries().length - 1" aria-label="Descendre dans le classement" (click)="move(entry.entryId, 1)">↓</button>
+                </span>
+              }
+            </li>
+          }
+        </ol>
+
+        @if (currentRace.state === 'BET_CLOSED') {
+          <button tuiButton type="button" size="l" [disabled]="loading() || orderedEntries().length === 0" (click)="publishResult()">
+            Envoyer le résultat
+          </button>
+          <p class="publish-warning">Cette action clôt la course et communique immédiatement le résultat aux participants.</p>
+        } @else if (currentRace.state !== 'FINISHED') {
+          <div class="locked-note">L’ordre d’arrivée sera disponible une fois les paris arrêtés.</div>
+        }
+      </section>
+    </div>
+    }
+
+    @if (nextState()) {
+      <section class="workflow-advance workflow-advance-bottom" aria-label="Passage à l’étape suivante">
+        <div>
+          <span class="next-label">Étape suivante</span>
+          <strong>{{ nextActionLabel(currentRace.state) }}</strong>
+          <small>{{ nextActionHint(currentRace.state) }}</small>
+        </div>
+        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="advance()">
+          {{ nextActionLabel(currentRace.state) }} <span aria-hidden="true">→</span>
+        </button>
+      </section>
+    }
+  } @else {
+    <section class="loading-page">
+      @if (error(); as message) {
+        <p class="message error" role="alert">{{ message }}</p>
+        <a tuiButton routerLink="/admin" appearance="secondary">Retour à l’administration</a>
+      } @else {
+        <tui-loader size="xl" />
+        <p>Ouverture de la console de course…</p>
+      }
+    </section>
+  }
+</main>

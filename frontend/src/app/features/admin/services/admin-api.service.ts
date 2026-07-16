@@ -7,10 +7,12 @@ import {
   AdminUserResponse,
   HorseAdminRequest,
   HorseAdminResponse,
+  PartnerAdminResponse,
   RaceAdminRequest,
   RaceAdminResponse,
-  RaceEntryAdminRequest,
-  RaceEntryAdminResponse
+  RaceControl,
+  RaceHistoryDetail,
+  RaceHistorySummary
 } from '../models/admin-api.model';
 
 @Injectable({ providedIn: 'root' })
@@ -66,21 +68,48 @@ export class AdminApiService {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/races/${id}`));
   }
 
-  findRaceEntries(raceId: number | null = null): Promise<readonly RaceEntryAdminResponse[]> {
-    const url = raceId === null ? `${this.baseUrl}/race-entries` : `${this.baseUrl}/race-entries?raceId=${raceId}`;
-
-    return firstValueFrom(this.http.get<readonly RaceEntryAdminResponse[]>(url));
+  getRaceControl(id: number): Promise<RaceControl> {
+    return firstValueFrom(this.http.get<RaceControl>(`${this.baseUrl}/races/${id}/control`));
   }
 
-  createRaceEntry(request: RaceEntryAdminRequest): Promise<RaceEntryAdminResponse> {
-    return firstValueFrom(this.http.post<RaceEntryAdminResponse>(`${this.baseUrl}/race-entries`, request));
+  transitionRace(id: number, state: RaceControl['state']): Promise<RaceControl> {
+    return firstValueFrom(this.http.post<RaceControl>(`${this.baseUrl}/races/${id}/state`, { state }));
   }
 
-  updateRaceEntry(id: number, request: RaceEntryAdminRequest): Promise<RaceEntryAdminResponse> {
-    return firstValueFrom(this.http.put<RaceEntryAdminResponse>(`${this.baseUrl}/race-entries/${id}`, request));
+  publishRaceResult(id: number, orderedEntryIds: readonly number[]): Promise<RaceControl> {
+    return firstValueFrom(this.http.post<RaceControl>(`${this.baseUrl}/races/${id}/result`, { orderedEntryIds }));
   }
 
-  deleteRaceEntry(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/race-entries/${id}`));
+  selectRaceRunners(id: number, horseIds: readonly number[]): Promise<RaceControl> {
+    return firstValueFrom(this.http.put<RaceControl>(`${this.baseUrl}/races/${id}/runners`, { horseIds }));
   }
+
+  clearRaceFromLive(id: number): Promise<RaceControl> {
+    return firstValueFrom(this.http.post<RaceControl>(`${this.baseUrl}/races/${id}/clear-live`, null));
+  }
+
+  findRaceHistory(): Promise<readonly RaceHistorySummary[]> {
+    return firstValueFrom(this.http.get<readonly RaceHistorySummary[]>(`${this.baseUrl}/race-history`));
+  }
+
+  getRaceHistoryDetail(id: number): Promise<RaceHistoryDetail> {
+    return firstValueFrom(this.http.get<RaceHistoryDetail>(`${this.baseUrl}/race-history/${id}`));
+  }
+
+  findPartners(): Promise<readonly PartnerAdminResponse[]> {
+    return firstValueFrom(this.http.get<readonly PartnerAdminResponse[]>(`${this.baseUrl}/partners`));
+  }
+
+  createPartner(formData: FormData): Promise<PartnerAdminResponse> {
+    return firstValueFrom(this.http.post<PartnerAdminResponse>(`${this.baseUrl}/partners`, formData));
+  }
+
+  updatePartner(id: number, formData: FormData): Promise<PartnerAdminResponse> {
+    return firstValueFrom(this.http.put<PartnerAdminResponse>(`${this.baseUrl}/partners/${id}`, formData));
+  }
+
+  deletePartner(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/partners/${id}`));
+  }
+
 }
