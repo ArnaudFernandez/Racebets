@@ -72,7 +72,7 @@ services:
         condition: service_healthy
     environment:
       BACKEND_URL: http://backend:8080
-      NGINX_ENVSUBST_OUTPUT_DIR: /tmp/nginx/conf.d
+      NGINX_ENVSUBST_OUTPUT_DIR: /tmp
     expose:
       - "8080"
     networks:

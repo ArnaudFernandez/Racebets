@@ -12,14 +12,13 @@ RUN npm run build
 FROM nginx:1.29.8-alpine AS runtime
 
 ENV BACKEND_URL=http://backend:8080 \
-    NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx/conf.d
+    NGINX_ENVSUBST_OUTPUT_DIR=/tmp
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/templates/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
-RUN mkdir -p /tmp/nginx/conf.d \
-    && chown -R 101:101 /tmp/nginx /usr/share/nginx/html
+RUN chown -R 101:101 /usr/share/nginx/html
 
 EXPOSE 8080
 USER 101
