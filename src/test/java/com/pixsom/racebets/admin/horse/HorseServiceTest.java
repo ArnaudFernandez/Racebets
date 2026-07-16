@@ -43,7 +43,7 @@ class HorseServiceTest {
         List<HorseResponse> response = horseService.findAll();
 
         assertThat(response).containsExactly(new HorseResponse(1L, "Ourasi"));
-        verify(horseRepository).findAll(Sort.by("name").ascending());
+        verify(horseRepository).findAll(Sort.by("id").ascending());
     }
 
     @Test

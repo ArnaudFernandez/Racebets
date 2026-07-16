@@ -8,6 +8,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class AdminExceptionHandler {
 
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public AdminErrorResponse handleBadRequest(BadRequestException exception) {
+        return new AdminErrorResponse(exception.getMessage());
+    }
+
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public AdminErrorResponse handleNotFound(NotFoundException exception) {

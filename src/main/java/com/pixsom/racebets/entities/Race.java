@@ -7,6 +7,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 
 @Getter
 @Setter
@@ -28,4 +30,10 @@ public class Race extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name="state", nullable = false)
     private RaceState state;
+
+    @Column(name = "visible_on_live", nullable = false)
+    private boolean visibleOnLive;
+
+    @Column(name = "finished_at")
+    private Instant finishedAt;
 }

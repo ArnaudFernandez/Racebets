@@ -45,6 +45,12 @@ public class Bet extends AuditableEntity {
         this.dateTimeBet = Instant.now();
     }
 
+    public void changeSelection(RaceEntry raceEntry) {
+        this.raceEntry = raceEntry;
+        this.state = BetState.PENDING;
+        this.dateTimeBet = Instant.now();
+    }
+
     public void markAsWon() {
         state = BetState.WON;
     }

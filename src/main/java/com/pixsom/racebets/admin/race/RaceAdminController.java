@@ -15,15 +15,21 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import com.pixsom.racebets.admin.race.dto.RaceControlResponse;
+import com.pixsom.racebets.admin.race.dto.RaceResultRequest;
+import com.pixsom.racebets.admin.race.dto.RaceRunnersRequest;
+import com.pixsom.racebets.admin.race.dto.RaceStateRequest;
 
 @RestController
 @RequestMapping("/api/admin/races")
 public class RaceAdminController {
 
     private final RaceService raceService;
+    private final RaceWorkflowService raceWorkflowService;
 
-    public RaceAdminController(RaceService raceService) {
+    public RaceAdminController(RaceService raceService, RaceWorkflowService raceWorkflowService) {
         this.raceService = raceService;
+        this.raceWorkflowService = raceWorkflowService;
     }
 
     @GetMapping
@@ -51,5 +57,30 @@ public class RaceAdminController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         raceService.delete(id);
+    }
+
+    @GetMapping("/{id}/control")
+    public RaceControlResponse control(@PathVariable Long id) {
+        return raceWorkflowService.control(id);
+    }
+
+    @PostMapping("/{id}/state")
+    public RaceControlResponse transition(@PathVariable Long id, @Valid @RequestBody RaceStateRequest request) {
+        return raceWorkflowService.transition(id, request.state());
+    }
+
+    @PostMapping("/{id}/result")
+    public RaceControlResponse publishResult(@PathVariable Long id, @Valid @RequestBody RaceResultRequest request) {
+        return raceWorkflowService.publishResult(id, request.orderedEntryIds());
+    }
+
+    @PutMapping("/{id}/runners")
+    public RaceControlResponse selectRunners(@PathVariable Long id, @Valid @RequestBody RaceRunnersRequest request) {
+        return raceWorkflowService.selectRunners(id, request.horseIds());
+    }
+
+    @PostMapping("/{id}/clear-live")
+    public RaceControlResponse clearLive(@PathVariable Long id) {
+        return raceWorkflowService.clearLive(id);
     }
 }

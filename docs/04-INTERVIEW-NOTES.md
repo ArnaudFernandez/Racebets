@@ -182,3 +182,87 @@ Reponse : le frontend est seulement une barriere UX. La securite reelle est cote
 Pourquoi le stockage JWT en `localStorage` est a challenger avant production ?
 
 Reponse : il est simple et persistant, mais expose le token en cas de XSS. Selon le modele de menace, des cookies `HttpOnly`, une duree de vie plus courte ou un mecanisme de refresh mieux encadre peuvent etre preferables.
+
+## Lot 3 : Workflow De Course Et Paris Server-Driven
+
+### Reponse Senior Synthese
+
+J'ai modelise le deroule d'une course comme une machine d'etats lineaire controlee par le backend. Le frontend ne
+peut ni ouvrir les paris ni publier un resultat directement par un simple CRUD. Le pari est horodate par le serveur,
+serialise par verrou pessimiste sur l'utilisateur et remplace atomiquement en cas de changement. La publication du
+resultat exige tous les partants exactement une fois, classe les `RaceEntry`, settle chaque pari et termine la course
+dans une seule transaction. Le polling REST authentifie est un transport temporaire ; le futur STOMP reutilisera le
+meme snapshot et les memes invariants.
+
+### Killer Questions Lot 3
+
+Pourquoi ne pas laisser le CRUD `Race` changer librement l'etat ?
+
+Reponse : un enum valide ne garantit pas une transition valide. Sans cas d'usage dedie, on pourrait passer de
+`CREATED` a `FINISHED`, rouvrir des paris apres leur fermeture ou publier un resultat incomplet.
+
+Pourquoi verrouiller l'utilisateur pendant la prise de pari ?
+
+Reponse : l'invariant est un pari par utilisateur et par course, alors que la course est indirectement referencee
+via `RaceEntry`. Le verrou utilisateur serialise deux votes concurrents du meme participant sans dupliquer la course
+dans `Bet` et sans creer une incoherence de mapping.
+
+Pourquoi l'horodatage est-il genere cote serveur ?
+
+Reponse : le classement de rapidite est une donnee metier. Une date client serait falsifiable et dependrait de
+l'horloge du terminal. Le serveur fournit une base commune ; un changement de cheval renouvelle volontairement cette
+date.
+
+Pourquoi garder REST + polling avant STOMP ?
+
+Reponse : le snapshot REST valide deja les contrats, la securite et tout le workflow. STOMP devient ensuite un
+changement de transport et de latence, pas une reecriture du domaine. `EventSource` natif ne permettait pas d'ajouter
+le bearer JWT, ce qui avait conduit l'ancien SSE a etre public.
+
+Pourquoi separer `visibleOnLive` de `RaceState.FINISHED` ?
+
+Reponse : `FINISHED` decrit un fait metier permanent, alors que l'affichage du resultat est une decision de
+publication temporaire. Reutiliser l'etat pour remettre l'ecran a zero detruirait le sens de l'historique ou
+ajouterait un etat technique. Un indicateur de visibilite permet de conserver le resultat tout en retirant la
+course de l'ecran public.
+
+Pourquoi ne pas laisser l'admin saisir le rang dans le CRUD des participations ?
+
+Reponse : avant la fin, aucun rang n'existe. Le seul cas d'usage legitime est la publication d'un ordre d'arrivee
+complet, qui garantit l'unicite et la continuite des places dans une transaction. Un champ optionnel editable
+permettait des classements partiels ou contradictoires.
+
+Pourquoi ajouter `finishedAt` alors que l'entite possede deja `updatedAt` ?
+
+Reponse : `finishedAt` represente l'instant metier ou le resultat devient officiel. `updatedAt` est une information
+technique qui peut changer plus tard, par exemple lors du retrait du resultat de l'ecran live. Trier l'historique sur
+`updatedAt` rendrait donc son ordre instable.
+
+Comment garantir un classement reproductible si deux gagnants ont le meme horodatage ?
+
+Reponse : le tri utilise d'abord l'horodatage serveur du vote, puis l'identifiant persiste du pari comme critere de
+departage. L'ordre reste ainsi total et deterministe, sans inventer une precision temporelle absente de la donnee.
+
+Pourquoi l'API d'historique personnel ne prend-elle pas de `userId` en parametre ?
+
+Reponse : l'identite est deja portee par le JWT signe. Accepter un identifiant fourni par le client introduirait un
+risque d'acces horizontal aux paris d'un autre utilisateur. Le controller extrait donc le claim `userId` et le
+service ne travaille qu'avec cette identite authentifiee.
+
+Pourquoi separer la disponibilite de l'historique de son contenu complet ?
+
+Reponse : le menu a seulement besoin de savoir si au moins une participation terminee existe. Un `exists` en base
+est moins couteux que charger les courses, leurs gagnants et les rangs a chaque initialisation de l'application. Le
+detail complet reste charge a la demande sur la page dediee.
+
+Pourquoi rendre la lecture des logos publique alors que leur administration est protegee ?
+
+Reponse : une balise HTML `<img>` ne passe pas par l'intercepteur Angular qui ajoute le bearer JWT. Le logo est un
+media public non sensible ; sa lecture peut donc etre anonyme, tandis que la liste admin et toutes les mutations
+restent protegees par `ROLE_ADMIN`. La liste publique filtre en plus les partenaires non coches.
+
+Pourquoi valider le type et la taille du logo cote serveur ?
+
+Reponse : l'attribut `accept` du champ fichier n'est qu'une aide UX et peut etre contourne. Le service impose donc
+une liste blanche de types raster et une limite de 2 Mo avant toute persistence, ce qui protege le stockage et evite
+les contenus actifs comme les SVG arbitraires.

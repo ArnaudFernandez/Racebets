@@ -69,9 +69,9 @@ class SecurityConfigTest {
     }
 
     @Test
-    void realtimeEndpointAcceptsAnonymousRequest() throws Exception {
+    void nonPublicEndpointRejectsAnonymousRequest() throws Exception {
         mockMvc.perform(get("/api/realtime/health"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

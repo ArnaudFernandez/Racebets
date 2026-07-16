@@ -12,9 +12,6 @@ public record RaceEntryRequest(
 
         @NotNull
         @Positive
-        Integer horseNumber,
-
-        @Positive
-        Integer rank
+        Integer horseNumber
 ) {
 }

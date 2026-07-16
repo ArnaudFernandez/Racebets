@@ -94,7 +94,7 @@ Regle importante : ne pas exposer directement les entites JPA dans les reponses 
 
 ### Lot 3 : Moteur Temps Reel WebSocket STOMP
 
-Statut : futur.
+Statut : socle metier et UX de course termine ; transport WebSocket STOMP restant.
 
 Objectif : ecran de paris server-driven sans rechargement.
 
@@ -112,6 +112,25 @@ Sujets futurs :
 - Gestion des etats `RaceState`.
 - Idempotence des messages.
 - Synchronisation initiale REST + flux temps reel.
+
+Termine dans ce lot :
+
+- machine d'etats serveur et transitions admin protegees ;
+- une seule course active ;
+- pari persiste, changement avec renouvellement d'horodatage ;
+- fermeture des paris, ordre d'arrivee complet et settlement `WON` / `LOST` ;
+- classement de rapidite des gagnants ;
+- console admin dediee et ecran participant adapte a chaque etat ;
+- composition des partants par selection multi-chevaux dans le brouillon, avec dossards automatiques ;
+- retrait explicite d'un resultat de l'ecran live sans modifier l'historique de la course ;
+- historique admin de toutes les courses terminees, avec ordre officiel, detail de chaque vote et gagnants classes
+  du plus rapide au moins rapide ;
+- historique personnel des paris, visible uniquement apres une premiere participation terminee, avec choix,
+  gagnant officiel, resultat et rang de rapidite ;
+- liste admin des courses en pleine largeur, creation en modale et hierarchie visuelle des courses terminees ;
+- gestion admin des partenaires avec upload de logo, activation individuelle et affichage sur l'ecran d'attente ;
+- actualisation automatique du lien d'historique personnel sans rechargement ;
+- snapshot REST authentifie et polling temporaire d'une seconde.
 
 ### Lot 4 : Docker / CI-CD / Dokploy
 

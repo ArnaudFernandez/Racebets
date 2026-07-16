@@ -30,14 +30,16 @@ class RaceAdminControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private RaceService raceService;
+    private RaceWorkflowService raceWorkflowService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         raceService = mock(RaceService.class);
+        raceWorkflowService = mock(RaceWorkflowService.class);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new RaceAdminController(raceService))
+                .standaloneSetup(new RaceAdminController(raceService, raceWorkflowService))
                 .setControllerAdvice(new AdminExceptionHandler())
                 .build();
     }

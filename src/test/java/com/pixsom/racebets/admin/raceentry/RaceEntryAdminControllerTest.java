@@ -74,7 +74,7 @@ class RaceEntryAdminControllerTest {
 
         mockMvc.perform(post("/api/admin/race-entries")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4, null))))
+                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2L))
                 .andExpect(jsonPath("$.horseNumber").value(4));
@@ -84,7 +84,7 @@ class RaceEntryAdminControllerTest {
     void createRejectsInvalidPayload() throws Exception {
         mockMvc.perform(post("/api/admin/race-entries")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 0, null))))
+                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 0))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -95,7 +95,7 @@ class RaceEntryAdminControllerTest {
 
         mockMvc.perform(post("/api/admin/race-entries")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4, null))))
+                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4))))
                 .andExpect(status().isConflict());
     }
 
@@ -106,7 +106,7 @@ class RaceEntryAdminControllerTest {
 
         mockMvc.perform(put("/api/admin/race-entries/3")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4, 1))))
+                        .content(objectMapper.writeValueAsString(new RaceEntryRequest(10L, 20L, 4))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(3L))
                 .andExpect(jsonPath("$.rank").value(1));

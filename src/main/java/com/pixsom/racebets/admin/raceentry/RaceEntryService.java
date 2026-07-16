@@ -48,6 +48,7 @@ public class RaceEntryService {
     @Transactional
     public RaceEntryResponse create(RaceEntryRequest request) {
         Race race = findRace(request.raceId());
+        ensureDraft(race);
         Horse horse = findHorse(request.horseId());
         validateCreateUniqueness(request);
 
@@ -60,6 +61,7 @@ public class RaceEntryService {
     public RaceEntryResponse update(Long id, RaceEntryRequest request) {
         RaceEntry raceEntry = findRaceEntry(id);
         Race race = findRace(request.raceId());
+        ensureDraft(race);
         Horse horse = findHorse(request.horseId());
         validateUpdateUniqueness(id, request);
 
@@ -70,6 +72,7 @@ public class RaceEntryService {
     @Transactional
     public void delete(Long id) {
         RaceEntry raceEntry = findRaceEntry(id);
+        ensureDraft(raceEntry.getRace());
         raceEntryRepository.delete(raceEntry);
     }
 
@@ -110,7 +113,12 @@ public class RaceEntryService {
         raceEntry.setRace(race);
         raceEntry.setHorse(horse);
         raceEntry.setHorseNumber(request.horseNumber());
-        raceEntry.setRank(request.rank());
+    }
+
+    private void ensureDraft(Race race) {
+        if (race.getState() != com.pixsom.racebets.enums.RaceState.CREATED) {
+            throw new ConflictException("Runners can only be changed while the race is a draft");
+        }
     }
 
     private RaceEntryResponse toResponse(RaceEntry raceEntry) {

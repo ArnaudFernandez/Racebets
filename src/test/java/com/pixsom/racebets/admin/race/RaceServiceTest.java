@@ -44,7 +44,7 @@ class RaceServiceTest {
         List<RaceResponse> response = raceService.findAll();
 
         assertThat(response).containsExactly(new RaceResponse(1L, "Prix de Paris", null, RaceState.CREATED));
-        verify(raceRepository).findAll(Sort.by("name").ascending());
+        verify(raceRepository).findAll(Sort.by("id").ascending());
     }
 
     @Test
@@ -61,7 +61,7 @@ class RaceServiceTest {
     }
 
     @Test
-    void createUsesRequestedStateWhenProvided() {
+    void createAlwaysStartsInCreatedState() {
         when(raceRepository.save(any(Race.class))).thenAnswer(invocation -> {
             Race saved = invocation.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 13L);
@@ -70,7 +70,7 @@ class RaceServiceTest {
 
         RaceResponse response = raceService.create(new RaceRequest("Prix de Vincennes", null, RaceState.STANDBY));
 
-        assertThat(response).isEqualTo(new RaceResponse(13L, "Prix de Vincennes", null, RaceState.STANDBY));
+        assertThat(response).isEqualTo(new RaceResponse(13L, "Prix de Vincennes", null, RaceState.CREATED));
     }
 
     @Test
@@ -85,14 +85,14 @@ class RaceServiceTest {
     }
 
     @Test
-    void updateChangesExistingRaceStateWhenProvided() {
+    void updateCannotBypassTheRaceWorkflow() {
         Race race = race(5L, "Prix", null, RaceState.CREATED);
         when(raceRepository.findById(5L)).thenReturn(Optional.of(race));
         when(raceRepository.save(race)).thenReturn(race);
 
         RaceResponse response = raceService.update(5L, new RaceRequest("Prix", null, RaceState.BET_CLOSED));
 
-        assertThat(response).isEqualTo(new RaceResponse(5L, "Prix", null, RaceState.BET_CLOSED));
+        assertThat(response).isEqualTo(new RaceResponse(5L, "Prix", null, RaceState.CREATED));
     }
 
     @Test

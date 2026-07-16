@@ -12,7 +12,14 @@ public interface RaceEntryRepository extends JpaRepository<RaceEntry, Long> {
     @EntityGraph(attributePaths = {"race", "horse"})
     List<RaceEntry> findAllBy(Sort sort);
 
+    @EntityGraph(attributePaths = {"race", "horse"})
     List<RaceEntry> findAllByRace_Id(Long raceId, Sort sort);
+
+    @EntityGraph(attributePaths = {"race", "horse"})
+    List<RaceEntry> findAllByRace_State(com.pixsom.racebets.enums.RaceState state, Sort sort);
+
+    @EntityGraph(attributePaths = {"race", "horse"})
+    List<RaceEntry> findAllByRace_IdInAndRank(List<Long> raceIds, Integer rank);
 
     boolean existsByRace_IdAndHorse_Id(Long raceId, Long horseId);
 

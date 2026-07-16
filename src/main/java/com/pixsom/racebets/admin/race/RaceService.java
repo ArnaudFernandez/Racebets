@@ -23,7 +23,7 @@ public class RaceService {
 
     @Transactional(readOnly = true)
     public List<RaceResponse> findAll() {
-        return raceRepository.findAll(Sort.by("name").ascending())
+        return raceRepository.findAll(Sort.by("id").ascending())
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -62,7 +62,7 @@ public class RaceService {
     private void applyRequest(Race race, RaceRequest request, RaceState defaultState) {
         race.setName(request.name().trim());
         race.setRaceImgUrl(normalizeOptionalText(request.raceImgUrl()));
-        race.setState(request.state() == null ? defaultState : request.state());
+        race.setState(defaultState);
     }
 
     private String normalizeOptionalText(String value) {

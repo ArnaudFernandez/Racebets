@@ -83,7 +83,7 @@ class RaceEntryServiceTest {
             return saved;
         });
 
-        RaceEntryResponse response = raceEntryService.create(new RaceEntryRequest(10L, 20L, 4, null));
+        RaceEntryResponse response = raceEntryService.create(new RaceEntryRequest(10L, 20L, 4));
 
         assertThat(response).isEqualTo(new RaceEntryResponse(30L, 10L, "Prix de Paris", 20L, "Ourasi", 4, null));
     }
@@ -96,7 +96,7 @@ class RaceEntryServiceTest {
         when(horseRepository.findById(20L)).thenReturn(Optional.of(horse));
         when(raceEntryRepository.existsByRace_IdAndHorse_Id(10L, 20L)).thenReturn(true);
 
-        assertThatThrownBy(() -> raceEntryService.create(new RaceEntryRequest(10L, 20L, 4, null)))
+        assertThatThrownBy(() -> raceEntryService.create(new RaceEntryRequest(10L, 20L, 4)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Horse is already registered for this race");
     }
@@ -110,7 +110,7 @@ class RaceEntryServiceTest {
         when(raceEntryRepository.existsByRace_IdAndHorse_Id(10L, 20L)).thenReturn(false);
         when(raceEntryRepository.existsByRace_IdAndHorseNumber(10L, 4)).thenReturn(true);
 
-        assertThatThrownBy(() -> raceEntryService.create(new RaceEntryRequest(10L, 20L, 4, null)))
+        assertThatThrownBy(() -> raceEntryService.create(new RaceEntryRequest(10L, 20L, 4)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Horse number is already used for this race");
     }
@@ -127,16 +127,16 @@ class RaceEntryServiceTest {
         when(raceEntryRepository.existsByRace_IdAndHorseNumberAndIdNot(11L, 7, 30L)).thenReturn(false);
         when(raceEntryRepository.save(entry)).thenReturn(entry);
 
-        RaceEntryResponse response = raceEntryService.update(30L, new RaceEntryRequest(11L, 21L, 7, 1));
+        RaceEntryResponse response = raceEntryService.update(30L, new RaceEntryRequest(11L, 21L, 7));
 
-        assertThat(response).isEqualTo(new RaceEntryResponse(30L, 11L, "New Race", 21L, "New Horse", 7, 1));
+        assertThat(response).isEqualTo(new RaceEntryResponse(30L, 11L, "New Race", 21L, "New Horse", 7, null));
     }
 
     @Test
     void updateRejectsUnknownRaceEntry() {
         when(raceEntryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> raceEntryService.update(99L, new RaceEntryRequest(10L, 20L, 4, null)))
+        assertThatThrownBy(() -> raceEntryService.update(99L, new RaceEntryRequest(10L, 20L, 4)))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Race entry not found");
     }

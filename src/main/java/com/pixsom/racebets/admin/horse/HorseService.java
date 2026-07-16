@@ -22,7 +22,7 @@ public class HorseService {
 
     @Transactional(readOnly = true)
     public List<HorseResponse> findAll() {
-        return horseRepository.findAll(Sort.by("name").ascending())
+        return horseRepository.findAll(Sort.by("id").ascending())
                 .stream()
                 .map(this::toResponse)
                 .toList();

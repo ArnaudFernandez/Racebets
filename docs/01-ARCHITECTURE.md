@@ -367,3 +367,74 @@ Couverture comportementale :
 - Seeder ADMIN local : desactive si non configure, creation admin si active, hash BCrypt, ajout du role `ADMIN` si l'utilisateur existe deja.
 - Integration admin : login avec l'utilisateur local seede, recuperation d'un JWT signe par le backend, acces autorise a `/api/admin/horses`.
 - Frontend admin/auth : build Angular et lint passent avec routes lazy-loadees, login, guard admin et interceptor JWT.
+
+## Pilotage De Course Et Paris Live
+
+Le workflow de course est maintenant porte par `RaceWorkflowService`. Les transitions autorisees sont strictement
+lineaires : `CREATED -> STANDBY -> BET_STARTING -> BETTING -> BET_CLOSED -> FINISHED`. Une seule course peut etre
+active a la fois et `FINISHED` ne peut etre atteint que par la publication d'un ordre d'arrivee complet.
+
+La composition des partants est integree a la console d'une course en `CREATED`. L'admin selectionne directement
+les chevaux et `RaceWorkflowService` cree ou supprime les `RaceEntry` dans une transaction. Les dossards sont
+attribues automatiquement au prochain numero libre. Le rang n'est jamais saisi manuellement : il reste `null`
+jusqu'a la publication de l'ordre d'arrivee.
+
+La visibilite publique est distincte de l'etat via `Race.visibleOnLive`. Une course terminee conserve donc son etat
+et son resultat lorsqu'elle est retiree de l'ecran public. L'action admin `clear-live` remet tous les participants
+sur l'ecran d'attente au prochain snapshot. La mise en attente d'une nouvelle course retire aussi automatiquement
+le precedent resultat encore affiche.
+
+`BettingService` est l'unique point d'ecriture des paris. Il verrouille l'utilisateur et la course pendant la
+transaction, refuse tout vote hors de `BETTING`, conserve l'horodatage quand la selection ne change pas et le
+renouvelle lors d'un changement de cheval. Le resultat positionne les rangs sur `RaceEntry`, puis marque tous les
+paris `WON` ou `LOST`. Le rang de rapidite d'un gagnant est calcule par `dateTimeBet`, puis par identifiant de pari.
+
+Le frontend consomme un snapshot authentifie `/api/betting/live` avec polling court. Ce mecanisme remplace l'ancien
+SSE public, incompatible avec le bearer JWT natif de `EventSource`. Le futur transport STOMP pourra pousser les
+memes snapshots sans changer les invariants ni les ecrans.
+
+## Historique Admin Des Courses
+
+Une course terminee conserve un `finishedAt` explicite, renseigne lors de la publication du resultat. Cette date
+metier est distincte de `updatedAt` : une modification technique ulterieure ne doit pas changer l'ordre chronologique
+de l'historique. Pour les anciennes donnees, la lecture utilise `updatedAt` comme valeur de repli.
+
+Les endpoints admin `/api/admin/race-history` et `/api/admin/race-history/{raceId}` exposent uniquement les courses
+`FINISHED`. La liste charge en masse les courses, leurs partants et leurs paris, puis calcule les compteurs sans
+requete par course. Le detail fournit l'ordre d'arrivee, tous les votes et les gagnants tries par `dateTimeBet`, puis
+par identifiant de pari afin que les egalites d'horodatage aient toujours un ordre deterministe.
+
+Le frontend ajoute un onglet `Historique` dans le panneau admin et une page de detail dediee. Le lien vers le detail
+conserve l'onglet d'origine dans l'URL, ce qui rend le retour navigateur et le partage d'URL predictibles.
+
+## Historique Personnel Des Paris
+
+Les endpoints authentifies `/api/betting/history/availability` et `/api/betting/history` utilisent exclusivement
+l'identifiant `userId` du JWT. Le client ne transmet donc jamais l'utilisateur dont il souhaite lire les paris.
+L'endpoint de disponibilite execute un simple test d'existence et pilote l'apparition du lien de navigation ; le
+detail n'est charge qu'a l'ouverture de la page.
+
+L'historique personnel ne contient que les courses `FINISHED`. Il expose le cheval choisi, le cheval classe premier,
+le resultat `WON` ou `LOST` et, pour un gagnant, son rang de rapidite. Les gagnants sont charges en masse pour toutes
+les courses concernees puis groupes par course, ce qui evite une requete par ligne d'historique.
+
+Les listes admin de chevaux et de courses sont ordonnees par identifiant croissant cote backend. L'ecran Courses
+reserve toute sa largeur au tableau et ouvre la creation ou l'edition dans une modale. Les courses terminees restent
+accessibles mais sont visuellement attenuees afin de mettre en avant celles encore pilotables.
+
+Le frontend applique egalement un tri explicite par identifiant via des `computed`, afin que l'ordre de presentation
+reste garanti meme si une autre source ou un cache fournit un tableau non trie. La disponibilite de l'historique
+personnel est controlee toutes les deux secondes tant que la session est active ; le lien apparait donc apres le
+settlement d'une course sans rechargement de page. Ce polling leger pourra etre remplace par un evenement STOMP.
+
+## Partenaires Et Logos
+
+`Partner` stocke le nom, l'indicateur `displayOnWaiting`, le type MIME et le logo binaire. L'upload admin multipart
+accepte PNG, JPEG et WebP jusqu'a 2 Mo. Les endpoints d'ecriture `/api/admin/partners/**` exigent le role `ADMIN`,
+tandis que les lectures `/api/partners` et `/api/partners/{id}/logo` sont publiques afin que les balises `<img>`
+puissent charger les medias sans exposer le JWT dans une URL.
+
+La liste publique ne retourne que les partenaires coches et leurs logos sont mis en cache une heure avec une version
+d'URL basee sur `updatedAt`. Le frontend ne les affiche que lorsque le snapshot live ne contient aucune course. Le
+logo institutionnel `logo_le_bouscat.png`, carre en 600 x 600, est utilise sans deformation dans l'entete, l'ecran
+d'attente, le favicon PNG et l'icone Apple Touch.
