@@ -31,6 +31,7 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE in Dokploy}
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:
@@ -64,6 +65,7 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE in Dokploy}
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       backend:
