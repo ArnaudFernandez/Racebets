@@ -77,7 +77,7 @@ jobs:
 
       - name: Audit frontend production dependencies
         working-directory: frontend
-        run: npm run audit:production
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build frontend
         working-directory: frontend
