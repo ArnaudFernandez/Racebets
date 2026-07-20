@@ -5,10 +5,11 @@ import { LiveRace, LiveRunner } from '../models/betting.model';
 import { BettingApiService } from '../services/betting-api.service';
 import { PublicPartner } from '../models/partner.model';
 import { PartnerService } from '../services/partner.service';
+import { RaceInProgressOverlayComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-live-betting-board',
-  imports: [TuiButton],
+  imports: [TuiButton, RaceInProgressOverlayComponent],
   templateUrl: './live-betting-board.component.html',
   styleUrl: './live-betting-board.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush

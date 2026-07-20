@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TUI_DARK_MODE, TuiButton, TuiRoot } from '@taiga-ui/core';
+import { filter, map } from 'rxjs';
 
 import { AuthService } from './core/auth/auth.service';
 import { AppFeaturesService } from './core/features/app-features.service';
 import { BetHistoryService } from './features/betting/services/bet-history.service';
+import { BettingApiService } from './features/betting/services/betting-api.service';
 
 @Component({
   selector: 'app-root',
@@ -18,8 +21,19 @@ export class AppComponent {
   protected readonly features = inject(AppFeaturesService);
   protected readonly betHistory = inject(BetHistoryService);
   private readonly router = inject(Router);
+  private readonly bettingApi = inject(BettingApiService);
   private readonly darkMode = inject(TUI_DARK_MODE);
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects)
+    ),
+    { initialValue: this.router.url }
+  );
   readonly logoutDialogOpen = signal(false);
+  readonly raceInProgressOnBettingPage = computed(
+    () => this.currentUrl().split('?')[0] === '/' && this.bettingApi.liveRace()?.state === 'BET_CLOSED'
+  );
 
   constructor() {
     this.darkMode.set(false);

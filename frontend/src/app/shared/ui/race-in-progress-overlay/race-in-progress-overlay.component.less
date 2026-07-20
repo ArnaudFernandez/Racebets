@@ -1,0 +1,66 @@
+:host {
+  display: contents;
+}
+
+.race-progress-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(1rem, 4vw, 2rem);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(19, 115, 66, .11), transparent 34rem),
+    var(--rb-paper);
+  color: var(--rb-ink);
+  text-align: center;
+}
+
+.race-progress-content {
+  display: grid;
+  justify-items: center;
+  gap: clamp(.75rem, 2vh, 1.25rem);
+  max-block-size: 100%;
+}
+
+.race-animation {
+  display: block;
+  inline-size: clamp(10.75rem, 18vw, 13.5rem);
+  block-size: clamp(14rem, 24vw, 17.75rem);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -.05em;
+  text-wrap: balance;
+}
+
+@media (max-width: 58rem) {
+  .race-progress-overlay {
+    inset-block-end: calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  .race-animation {
+    inline-size: min(11rem, 48vw);
+    block-size: min(14.5rem, 30vh);
+  }
+
+  h1 {
+    font-size: clamp(1.75rem, 7vw, 2.25rem);
+  }
+}
+
+@media (max-height: 35rem) and (orientation: landscape) {
+  .race-progress-content {
+    grid-template-columns: minmax(0, 18rem) auto;
+    align-items: center;
+  }
+
+  .race-animation {
+    inline-size: min(9rem, 29vw);
+    block-size: min(11.75rem, 56vh);
+  }
+}

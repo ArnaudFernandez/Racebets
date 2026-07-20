@@ -1,6 +1,6 @@
 <tui-root>
   <div class="app-frame">
-    <header class="app-topbar">
+    <header class="app-topbar" [attr.inert]="raceInProgressOnBettingPage() ? '' : null">
       <a class="brand" routerLink="/" aria-label="Racebets accueil">
         <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
         <span>

@@ -1,4 +1,4 @@
-<main class="live-shell">
+<main class="live-shell" [attr.inert]="race()?.state === 'BET_CLOSED' ? '' : null">
   @if (race(); as currentRace) {
     <section class="race-stage" [class]="'state-' + currentRace.state.toLowerCase()">
       <div class="stage-copy">
@@ -95,6 +95,10 @@
     </section>
   }
 </main>
+
+@if (race()?.state === 'BET_CLOSED') {
+  <app-race-in-progress-overlay />
+}
 
 @if (changeCandidate(); as candidate) {
   <div class="modal-backdrop">
