@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-ARG MAVEN_IMAGE=maven:3.9-eclipse-temurin-25
-ARG RUNTIME_IMAGE=eclipse-temurin:25-jre
+ARG MAVEN_IMAGE=maven:3.9-eclipse-temurin-25@sha256:7e461cec477077c1d9e50b13df8aef9018764410f4c4cd7c34803f10c4c99e4c
+ARG RUNTIME_IMAGE=eclipse-temurin:25-jre-alpine@sha256:28db6fdf60e38945e43d840c0333aeaec66c15943070104f7586fd3c9d1665b0
 
 FROM ${MAVEN_IMAGE} AS build
 WORKDIR /workspace
@@ -14,10 +14,10 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
 FROM ${RUNTIME_IMAGE} AS runtime
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin appuser
+RUN apk upgrade --no-cache \
+    && apk add --no-cache curl \
+    && addgroup -S -g 10001 appuser \
+    && adduser -S -D -H -u 10001 -G appuser -s /sbin/nologin appuser
 
 COPY --from=build --chown=appuser:appuser /workspace/target/*.jar /app/app.jar
 

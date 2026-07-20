@@ -164,7 +164,7 @@ Mockito est configure en `javaagent` via Surefire. Ne pas supprimer cette config
 
 Regles actuelles pour `frontend/` :
 
-- Angular 19 en standalone components.
+- Angular 21 en standalone components.
 - `ChangeDetectionStrategy.OnPush` obligatoire sur les composants.
 - Preferer `input()`, `output()`, `viewChild()` et `computed()` aux APIs decorateur historiques.
 - Utiliser `@ngrx/signals` pour l'etat local applicatif structure.

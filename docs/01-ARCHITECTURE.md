@@ -312,7 +312,7 @@ Les contraintes SQL uniques restent presentes sur `race_entries` comme filet de 
 
 ## Frontend Actuel
 
-Le dossier `frontend/` contient une application Angular 19 standalone avec Taiga UI v5 et NgRx Signals.
+Le dossier `frontend/` contient une application Angular 21 standalone avec Taiga UI v5 et NgRx Signals.
 
 Elements presents :
 

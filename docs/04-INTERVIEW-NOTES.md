@@ -129,7 +129,7 @@ Statut : valide fonctionnellement. Le socle admin, les CRUD backend `Horse`, `Ra
 - Validation d'entree avec `@NotBlank` et `@Size`.
 - Traduction d'une absence de ressource en HTTP `404` via `@RestControllerAdvice`.
 - Etat metier `RaceState` expose via DTO et conserve lors d'une mise a jour si absent de la requete.
-- Frontend Angular 19/Taiga UI v5 initialise avec Signals, NgRx Signals et SSE.
+- Frontend Angular 21/Taiga UI v5 initialise avec Signals, NgRx Signals et SSE.
 - Invariants `RaceEntry` controles avant sauvegarde et proteges aussi par contraintes SQL.
 - Conflits metier admin traduits en HTTP `409 Conflict`.
 - Routes Angular principales lazy-loadees pour garder le bundle initial sous budget.

@@ -87,7 +87,7 @@ Ordre recommande :
 11. Durcir l'UX admin : fait pour les erreurs backend, les etats de chargement et les confirmations de suppression.
 12. Valider l'integration end-to-end avec un utilisateur ADMIN reel et un token signe par le backend : fait via `AdminEndToEndTest`.
 
-Frontend actuel : une application Angular 19/Taiga UI v5 existe sous `frontend/`, avec un ecran de pari temps reel factice, NgRx Signals, un snapshot JSON `/api/realtime/race-betting` en attente du vrai WebSocket Lot 3, une page `/admin` Reactive Forms connectee aux CRUD admin backend, une route `/login`, un guard admin et un intercepteur JWT.
+Frontend actuel : une application Angular 21/Taiga UI v5 existe sous `frontend/`, avec un ecran de pari temps reel factice, NgRx Signals, un snapshot JSON `/api/realtime/race-betting` en attente du vrai WebSocket Lot 3, une page `/admin` Reactive Forms connectee aux CRUD admin backend, une route `/login`, un guard admin et un intercepteur JWT.
 
 Validation Lot 2 : backend `57` tests OK, frontend `npm run build` OK, frontend `npm run lint` OK.
 

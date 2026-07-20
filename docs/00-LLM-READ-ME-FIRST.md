@@ -16,14 +16,14 @@ But : application de paris hippiques en temps reel pour un hippodrome.
 
 Stack actuelle :
 
-- Backend : Spring Boot 4.0.6.
+- Backend : Spring Boot 4.0.7.
 - Java : 25.
 - Persistence : Spring Data JPA / Hibernate ORM 7.
 - Base cible : PostgreSQL.
 - Base de test/dev par defaut actuelle : H2 auto-configuree.
 - Securite : Spring Security 7, OAuth2 Resource Server, JWT signe en HS256 avec Nimbus.
 - Tests : JUnit 5, Mockito, Spring Test, MockMvc standalone.
-- Frontend : Angular 19 standalone components, TypeScript, Signals, NgRx Signals, Taiga UI v5.
+- Frontend : Angular 21 standalone components, TypeScript, Signals, NgRx Signals, Taiga UI v5.
 - Deploiement futur : Docker / Dokploy.
 
 ## Etat Des Lots
@@ -32,7 +32,7 @@ Lot 0 valide : modelisation BDD et entites JPA.
 
 Lot 1 valide : socle securite JWT backend, login par `email + accessCode`, generation de JWT, validation DTO, tests unitaires et MVC.
 
-Lot 2 valide fonctionnellement : socle admin securise, CRUD backend `Horse`, `Race` et `RaceEntry` termines, frontend Angular 19/Taiga UI v5 avec page `/admin` Reactive Forms branchee sur les CRUD, login frontend avec guard/interceptor JWT, UX admin durcie, seeder ADMIN local controle et validation d'integration avec JWT reel.
+Lot 2 valide fonctionnellement : socle admin securise, CRUD backend `Horse`, `Race` et `RaceEntry` termines, frontend Angular 21/Taiga UI v5 avec page `/admin` Reactive Forms branchee sur les CRUD, login frontend avec guard/interceptor JWT, UX admin durcie, seeder ADMIN local controle et validation d'integration avec JWT reel.
 
 Lot 3 futur : moteur temps reel WebSocket STOMP, ecran de paris server-driven.
 

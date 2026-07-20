@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   postgres:
-    image: postgres:17.10-alpine
+    image: postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-racebets_staging}
@@ -42,6 +42,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-racebets}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:?Set SPRING_JPA_HIBERNATE_DDL_AUTO in Dokploy}
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-false}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Dokploy}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=75.0 -Djava.io.tmpdir=/tmp}

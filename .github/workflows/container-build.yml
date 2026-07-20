@@ -25,6 +25,20 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+        env:
+          POSTGRES_DB: racebets_ci
+          POSTGRES_USER: racebets
+          POSTGRES_PASSWORD: ci-only-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U racebets -d racebets_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -40,6 +54,14 @@ jobs:
         run: chmod +x ./mvnw
 
       - name: Test backend
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/racebets_ci
+          SPRING_DATASOURCE_USERNAME: racebets
+          SPRING_DATASOURCE_PASSWORD: ci-only-postgres-password
+          SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+          SPRING_FLYWAY_ENABLED: true
+          SPRING_FLYWAY_BASELINE_ON_MIGRATE: false
+          JWT_SECRET: test-only-secret-with-at-least-thirty-two-bytes
         run: ./mvnw -B test
 
       - name: Set up Node
@@ -52,6 +74,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Audit frontend production dependencies
+        working-directory: frontend
+        run: npm run audit:production
 
       - name: Build frontend
         working-directory: frontend
@@ -67,17 +93,32 @@ jobs:
           FRONTEND_IMAGE: ghcr.io/example/racebets/frontend:test
           POSTGRES_PASSWORD: test-only-postgres-password
           JWT_SECRET: test-only-jwt-secret-with-at-least-thirty-two-bytes
-          SPRING_JPA_HIBERNATE_DDL_AUTO: update
+          SPRING_JPA_HIBERNATE_DDL_AUTO: validate
         run: |
           docker compose -f deploy/dokploy/docker-compose.staging.yml config --quiet
           docker compose -f deploy/dokploy/docker-compose.production.yml config --quiet
+
+  dependency-review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Reject newly introduced high-risk dependencies
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
 
   validate-containers:
     name: Validate container images
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'pull_request'
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -93,8 +134,21 @@ jobs:
           context: .
           file: Dockerfile.backend
           push: false
+          load: true
+          tags: racebets-backend:ci
+          pull: true
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: racebets-backend:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
 
       - name: Build frontend image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -102,13 +156,28 @@ jobs:
           context: frontend
           file: frontend/Dockerfile
           push: false
+          load: true
+          tags: racebets-frontend:ci
+          pull: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: racebets-frontend:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
 
   publish:
     name: Publish images to GHCR
     runs-on: ubuntu-latest
-    needs: test
+    needs:
+      - test
+      - validate-containers
     if: github.event_name != 'pull_request'
     timeout-minutes: 30
     permissions:
@@ -177,3 +246,45 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
+
+  deploy-staging:
+    name: Deploy staging with Dokploy
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    timeout-minutes: 5
+    environment: staging
+    permissions:
+      contents: read
+    steps:
+      - name: Validate Dokploy configuration
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_COMPOSE_ID: ${{ vars.DOKPLOY_STAGING_COMPOSE_ID }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+        shell: bash
+        run: |
+          test -n "$DOKPLOY_URL" || { echo "::error::Missing staging variable DOKPLOY_URL"; exit 1; }
+          test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing staging variable DOKPLOY_STAGING_COMPOSE_ID"; exit 1; }
+          test -n "$DOKPLOY_API_TOKEN" || { echo "::error::Missing staging secret DOKPLOY_API_TOKEN"; exit 1; }
+
+      - name: Trigger Dokploy after image publication
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_COMPOSE_ID: ${{ vars.DOKPLOY_STAGING_COMPOSE_ID }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+        shell: bash
+        run: |
+          payload="$(jq -n \
+            --arg composeId "$DOKPLOY_COMPOSE_ID" \
+            --arg title "Staging ${GITHUB_SHA}" \
+            '{composeId: $composeId, title: $title}')"
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 10 --max-time 60 \
+            --request POST "${DOKPLOY_URL%/}/api/compose.deploy" \
+            --header 'accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --header "x-api-key: ${DOKPLOY_API_TOKEN}" \
+            --data "$payload"
