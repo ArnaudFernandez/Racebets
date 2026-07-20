@@ -161,7 +161,6 @@ jobs:
           pull: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
-
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -247,44 +246,3 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
 
-  deploy-staging:
-    name: Deploy staging with Dokploy
-    runs-on: ubuntu-latest
-    needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
-    timeout-minutes: 5
-    environment: staging
-    permissions:
-      contents: read
-    steps:
-      - name: Validate Dokploy configuration
-        env:
-          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
-          DOKPLOY_COMPOSE_ID: ${{ vars.DOKPLOY_STAGING_COMPOSE_ID }}
-          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
-        shell: bash
-        run: |
-          test -n "$DOKPLOY_URL" || { echo "::error::Missing staging variable DOKPLOY_URL"; exit 1; }
-          test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing staging variable DOKPLOY_STAGING_COMPOSE_ID"; exit 1; }
-          test -n "$DOKPLOY_API_TOKEN" || { echo "::error::Missing staging secret DOKPLOY_API_TOKEN"; exit 1; }
-
-      - name: Trigger Dokploy after image publication
-        env:
-          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
-          DOKPLOY_COMPOSE_ID: ${{ vars.DOKPLOY_STAGING_COMPOSE_ID }}
-          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
-        shell: bash
-        run: |
-          payload="$(jq -n \
-            --arg composeId "$DOKPLOY_COMPOSE_ID" \
-            --arg title "Staging ${GITHUB_SHA}" \
-            '{composeId: $composeId, title: $title}')"
-
-          curl --fail-with-body --silent --show-error \
-            --retry 3 --retry-all-errors \
-            --connect-timeout 10 --max-time 60 \
-            --request POST "${DOKPLOY_URL%/}/api/compose.deploy" \
-            --header 'accept: application/json' \
-            --header 'Content-Type: application/json' \
-            --header "x-api-key: ${DOKPLOY_API_TOKEN}" \
-            --data "$payload"
