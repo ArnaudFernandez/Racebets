@@ -41,4 +41,12 @@ public class QuizSession extends AuditableEntity {
     private int currentQuestionIndex = -1;
 
     private Instant phaseStartedAt;
+
+    /**
+     * Database-backed singleton slot. Live sessions own the only TRUE value;
+     * finished sessions release it by storing NULL (unique constraints allow
+     * multiple NULL values on PostgreSQL and H2).
+     */
+    @Column(name = "active_slot", unique = true)
+    private Boolean activeSlot;
 }

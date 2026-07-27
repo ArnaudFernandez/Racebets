@@ -68,6 +68,11 @@ public class QuizAdminController {
         return quizService.findLiveSessions();
     }
 
+    @GetMapping("/sessions/{sessionId}")
+    public QuizSessionSnapshotResponse session(@PathVariable Long sessionId) {
+        return quizService.findAdminSessionSnapshot(sessionId);
+    }
+
     @PostMapping("/sessions/{sessionId}/start")
     public QuizSessionSnapshotResponse start(@PathVariable Long sessionId) {
         return quizService.startSession(sessionId);

@@ -186,6 +186,10 @@ Claims generes :
 - `iat` : issued at.
 - `exp` : expiration.
 
+La duree par defaut est de 24 heures (`86400000` ms) afin qu'une connexion reste valide pendant toute une journee
+d'evenement. Elle reste configurable avec `JWT_EXPIRATION` pour les environnements qui exigent une politique plus
+courte ou plus longue. Une modification de cette valeur ne prolonge que les jetons emis apres le redeploiement.
+
 Le serveur est stateless :
 
 ```java
@@ -318,11 +322,12 @@ Elements presents :
 
 - Route racine lazy-loadee vers `LiveBettingBoardComponent`.
 - Route `/admin` lazy-loadee vers `AdminDashboardComponent`.
-- Route `/login` lazy-loadee vers `LoginPageComponent`.
+- Route publique `/login` lazy-loadee vers `LoginPageComponent` ; toutes les autres routes sont regroupees sous un `canActivateChild` exigeant une session valide.
 - `BettingSignalStore` avec `@ngrx/signals` pour les partants par course et le pari utilisateur local.
 - `SseService` conserve son nom historique mais charge maintenant un snapshot JSON one-shot depuis `/api/realtime/race-betting` en attendant le vrai WebSocket Lot 3.
 - `RealtimeCardComponent` partage avec `input()` et `ChangeDetectionStrategy.OnPush`.
 - `AuthService` gere le login frontend, la session JWT locale et l'expiration.
+- Le composant racine pilote les navigations desktop et mobile directement depuis le signal d'authentification : elles sont absentes hors connexion et apparaissent sans rechargement apres authentification.
 - `authTokenInterceptor` ajoute `Authorization: Bearer ...` aux appels `/api/**` hors `/api/auth/login`.
 - `adminGuard` protege la route `/admin` en exigeant le role `ADMIN` cote frontend.
 - `AdminApiService` fournit les appels HTTP typés vers `/api/admin/horses`, `/api/admin/races`, `/api/admin/race-entries`.
@@ -439,6 +444,38 @@ La liste publique ne retourne que les partenaires coches et leurs logos sont mis
 d'URL basee sur `updatedAt`. Le frontend ne les affiche que lorsque le snapshot live ne contient aucune course. Le
 logo institutionnel `logo_le_bouscat.png`, carre en 600 x 600, est utilise sans deformation dans l'entete, l'ecran
 d'attente, le favicon PNG et l'icone Apple Touch.
+
+## Administration Et Pilotage Des Quiz
+
+Le parcours admin separe trois responsabilites. L'onglet `Mes quiz` liste les questionnaires dans un tableau Taiga
+UI et expose leur disponibilite. La creation et l'edition sont portees par les routes dediees
+`/admin/quizzes/new` et `/admin/quizzes/{id}/edit`. Le pilotage d'une session est isole dans
+`/admin/quizzes/sessions/{sessionId}` et reprend le principe de la console de course : workflow visible, etape
+suivante explicite, action d'avancement unique et rafraichissement leger des compteurs.
+
+La machine d'etats reste lineaire : `OPENING -> QUESTION_OPEN -> QUESTION_LOCKED -> ANSWER_REVEALED -> SCOREBOARD`,
+puis retour a `QUESTION_OPEN` pour la question suivante ou passage a `FINISHED`. Le frontend ne choisit jamais un
+etat arbitraire. L'etape `QUESTION_OPEN -> QUESTION_LOCKED` est declenchee par `QuizSessionScheduler` a l'echeance
+calculee par le serveur. L'admin peut toutefois provoquer cette transition avant l'echeance depuis la console, apres
+une confirmation explicite qui rappelle le temps restant. Les autres transitions restent pilotees depuis la console
+dediee.
+
+Pendant `QUESTION_OPEN`, une soumission existante est mise a jour plutot que rejetee : le participant peut donc
+changer de choix autant de fois qu'il le souhaite. Le service verrouille la session avant de comparer l'heure serveur
+a `questionEndsAt`, ce qui definit un ordre exact entre une derniere reponse et la fermeture automatique. Les
+snapshots exposent `serverTime` et `questionEndsAt` pour synchroniser le compte a rebours client sans faire confiance
+a l'horloge du telephone. En `FINISHED`, le client quitte automatiquement la session et revient vers l'ecran principal
+active par la configuration fonctionnelle.
+
+Une session live occupe `quiz_sessions.active_slot = TRUE`. Cette colonne nullable porte une contrainte d'unicite :
+les sessions terminees liberent le slot avec `NULL`, tandis qu'une seconde ouverture concurrente echoue en base,
+meme si deux requetes ont franchi simultanement la verification applicative. Un questionnaire utilise par la session
+active ne peut etre ni modifie ni supprime.
+
+Les visuels de question et de correction acceptent PNG, JPEG et WebP jusqu'a 5 Mo chacun. Le navigateur controle le
+type et la taille avant lecture ; le backend decode ensuite le Base64 et verifie la taille binaire reelle avant
+persistance. La migration `V2__single_active_quiz_session.sql` conserve au plus la session live la plus recente lors
+de l'ajout de la contrainte sur une base existante.
 
 ## Systeme D'Interface
 

@@ -18,12 +18,14 @@ import com.pixsom.racebets.repositories.QuizParticipantRepository;
 import com.pixsom.racebets.repositories.QuizSessionRepository;
 import com.pixsom.racebets.repositories.QuizSetRepository;
 import com.pixsom.racebets.repositories.QuizSubmissionRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,7 @@ import java.util.stream.Collectors;
 public class QuizService {
 
     private static final int DEFAULT_DURATION_SECONDS = 30;
-    private static final int MAX_DATA_URL_LENGTH = 750_000;
+    private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     private static final Set<String> ALLOWED_IMAGE_PREFIXES = Set.of(
             "data:image/png;base64,",
             "data:image/jpeg;base64,",
@@ -92,6 +94,7 @@ public class QuizService {
     @Transactional
     public QuizSetDetailResponse updateQuizSet(Long id, QuizSetRequest request) {
         QuizSet quizSet = findSet(id);
+        requireNoLiveSession(quizSet, "Un questionnaire utilise par la session live ne peut pas etre modifie");
         quizSet.getQuestions().clear();
         applySetRequest(quizSet, request);
         return toDetailResponse(quizSetRepository.save(quizSet), true);
@@ -100,6 +103,7 @@ public class QuizService {
     @Transactional
     public void deleteQuizSet(Long id) {
         QuizSet quizSet = findSet(id);
+        requireNoLiveSession(quizSet, "Le questionnaire de la session live ne peut pas etre supprime");
         for (QuizSession session : quizSessionRepository.findByQuizSet(quizSet)) {
             submissionRepository.deleteBySession(session);
             participantRepository.deleteBySession(session);
@@ -114,18 +118,26 @@ public class QuizService {
         if (quizSet.getQuestions().isEmpty()) {
             throw new ConflictException("A quiz set must contain at least one question before launch");
         }
+        if (quizSessionRepository.existsByPhaseIn(LIVE_PHASES)) {
+            throw new ConflictException("Une session live est deja en cours. Terminez-la avant d'en lancer une autre.");
+        }
 
         QuizSession session = new QuizSession();
         session.setQuizSet(quizSet);
         session.setPhase(QuizSessionPhase.OPENING);
         session.setCurrentQuestionIndex(-1);
         session.setPhaseStartedAt(Instant.now());
-        return toSnapshot(quizSessionRepository.save(session), null, true);
+        session.setActiveSlot(true);
+        try {
+            return toSnapshot(quizSessionRepository.saveAndFlush(session), null, true);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Une session live est deja en cours. Terminez-la avant d'en lancer une autre.");
+        }
     }
 
     @Transactional
     public QuizSessionSnapshotResponse startSession(Long sessionId) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.OPENING);
         session.setCurrentQuestionIndex(0);
         setPhase(session, QuizSessionPhase.QUESTION_OPEN);
@@ -134,7 +146,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse lockQuestion(Long sessionId) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.QUESTION_OPEN);
         setPhase(session, QuizSessionPhase.QUESTION_LOCKED);
         return toSnapshot(session, null, true);
@@ -142,7 +154,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse revealAnswer(Long sessionId) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.QUESTION_LOCKED);
         setPhase(session, QuizSessionPhase.ANSWER_REVEALED);
         return toSnapshot(session, null, true);
@@ -150,7 +162,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse showScoreboard(Long sessionId) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.ANSWER_REVEALED);
         setPhase(session, QuizSessionPhase.SCOREBOARD);
         return toSnapshot(session, null, true);
@@ -158,7 +170,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse nextQuestion(Long sessionId) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.SCOREBOARD);
         int nextIndex = session.getCurrentQuestionIndex() + 1;
         if (nextIndex >= session.getQuizSet().getQuestions().size()) {
@@ -176,6 +188,11 @@ public class QuizService {
                 .stream()
                 .map(this::toSessionSummary)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuizSessionSnapshotResponse findAdminSessionSnapshot(Long sessionId) {
+        return toSnapshot(findSession(sessionId), null, true);
     }
 
     @Transactional(readOnly = true)
@@ -202,7 +219,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse submitAnswer(Long sessionId, Long answerId, Authentication authentication) {
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.QUESTION_OPEN);
         AppUser user = currentUser(authentication);
         if (!participantRepository.existsBySessionAndUser(session, user)) {
@@ -210,8 +227,9 @@ public class QuizService {
         }
 
         QuizQuestion question = currentQuestion(session);
-        if (submissionRepository.findBySessionAndQuestionAndUser(session, question, user).isPresent()) {
-            throw new ConflictException("You already answered this question");
+        if (isQuestionExpired(session, Instant.now())) {
+            setPhase(session, QuizSessionPhase.QUESTION_LOCKED);
+            return toSnapshot(session, user, false);
         }
 
         QuizAnswer answer = question.getAnswers().stream()
@@ -219,15 +237,27 @@ public class QuizService {
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("Answer not found for current question"));
 
-        QuizSubmission submission = new QuizSubmission();
-        submission.setSession(session);
-        submission.setQuestion(question);
+        QuizSubmission submission = submissionRepository.findBySessionAndQuestionAndUser(session, question, user)
+                .orElseGet(() -> {
+                    QuizSubmission created = new QuizSubmission();
+                    created.setSession(session);
+                    created.setQuestion(question);
+                    created.setUser(user);
+                    return created;
+                });
         submission.setAnswer(answer);
-        submission.setUser(user);
         submission.setCorrect(answer.isCorrect());
         submissionRepository.save(submission);
 
         return toSnapshot(session, user, false);
+    }
+
+    @Transactional
+    public void lockExpiredQuestions() {
+        Instant now = Instant.now();
+        quizSessionRepository.findLockedByPhase(QuizSessionPhase.QUESTION_OPEN).stream()
+                .filter(session -> isQuestionExpired(session, now))
+                .forEach(session -> setPhase(session, QuizSessionPhase.QUESTION_LOCKED));
     }
 
     private void applySetRequest(QuizSet quizSet, QuizSetRequest request) {
@@ -270,11 +300,25 @@ public class QuizService {
             return null;
         }
         String trimmed = value.trim();
-        boolean allowedType = ALLOWED_IMAGE_PREFIXES.stream().anyMatch(trimmed::startsWith);
-        if (!allowedType || trimmed.length() > MAX_DATA_URL_LENGTH) {
-            throw new ConflictException("Images must be png, jpeg or webp and below the configured size limit");
+        String prefix = ALLOWED_IMAGE_PREFIXES.stream()
+                .filter(trimmed::startsWith)
+                .findFirst()
+                .orElseThrow(() -> new ConflictException("Les images doivent etre au format PNG, JPEG ou WebP"));
+        try {
+            byte[] decoded = Base64.getDecoder().decode(trimmed.substring(prefix.length()));
+            if (decoded.length > MAX_IMAGE_BYTES) {
+                throw new ConflictException("Chaque image doit peser 5 Mo maximum");
+            }
+        } catch (IllegalArgumentException exception) {
+            throw new ConflictException("L'image envoyee est invalide");
         }
         return trimmed;
+    }
+
+    private void requireNoLiveSession(QuizSet quizSet, String message) {
+        if (quizSessionRepository.existsByQuizSetAndPhaseIn(quizSet, LIVE_PHASES)) {
+            throw new ConflictException(message);
+        }
     }
 
     private QuizSet findSet(Long id) {
@@ -284,6 +328,11 @@ public class QuizService {
 
     private QuizSession findSession(Long id) {
         return quizSessionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+    }
+
+    private QuizSession findSessionForUpdate(Long id) {
+        return quizSessionRepository.findLockedById(id)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
     }
 
@@ -304,6 +353,15 @@ public class QuizService {
     private void setPhase(QuizSession session, QuizSessionPhase phase) {
         session.setPhase(phase);
         session.setPhaseStartedAt(Instant.now());
+        session.setActiveSlot(phase == QuizSessionPhase.FINISHED ? null : true);
+    }
+
+    private boolean isQuestionExpired(QuizSession session, Instant now) {
+        if (session.getPhase() != QuizSessionPhase.QUESTION_OPEN || session.getPhaseStartedAt() == null) {
+            return false;
+        }
+        Instant deadline = session.getPhaseStartedAt().plusSeconds(currentQuestion(session).getDurationSeconds());
+        return !now.isBefore(deadline);
     }
 
     private QuizQuestion currentQuestion(QuizSession session) {
@@ -359,6 +417,12 @@ public class QuizService {
 
     private QuizSessionSnapshotResponse toSnapshot(QuizSession session, AppUser user, boolean adminView) {
         QuizQuestion question = session.getCurrentQuestionIndex() < 0 ? null : currentQuestion(session);
+        Instant serverTime = Instant.now();
+        Instant questionEndsAt = session.getPhase() == QuizSessionPhase.QUESTION_OPEN
+                && session.getPhaseStartedAt() != null
+                && question != null
+                ? session.getPhaseStartedAt().plusSeconds(question.getDurationSeconds())
+                : null;
         boolean reveal = adminView || session.getPhase() == QuizSessionPhase.ANSWER_REVEALED
                 || session.getPhase() == QuizSessionPhase.SCOREBOARD
                 || session.getPhase() == QuizSessionPhase.FINISHED;
@@ -379,7 +443,9 @@ public class QuizService {
                 session.getPhase(),
                 session.getCurrentQuestionIndex(),
                 session.getQuizSet().getQuestions().size(),
+                serverTime,
                 session.getPhaseStartedAt(),
+                questionEndsAt,
                 user != null && participantRepository.existsBySessionAndUser(session, user),
                 selectedAnswerId,
                 correctAnswerId,
