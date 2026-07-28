@@ -410,6 +410,13 @@ Les endpoints admin `/api/admin/race-history` et `/api/admin/race-history/{raceI
 requete par course. Le detail fournit l'ordre d'arrivee, tous les votes et les gagnants tries par `dateTimeBet`, puis
 par identifiant de pari afin que les egalites d'horodatage aient toujours un ordre deterministe.
 
+Une erreur de saisie peut etre corrigee via `PUT /api/admin/race-history/{raceId}/result`. La requete remplace
+l'ordre d'arrivee complet d'une course `FINISHED`. Le service verrouille la course, revalide la permutation de tous
+les partants et recalcule les etats `WON` / `LOST` dans la meme transaction. `finishedAt`, les selections et les
+horodatages des paris restent inchanges. La requete contient aussi l'ordre initial vu par l'administrateur ; toute
+correction concurrente rend cette precondition obsolete et provoque un conflit au lieu d'un ecrasement silencieux.
+La reponse retourne directement le detail historique recalcule.
+
 Le frontend ajoute un onglet `Historique` dans le panneau admin et une page de detail dediee. Le lien vers le detail
 conserve l'onglet d'origine dans l'URL, ce qui rend le retour navigateur et le partage d'URL predictibles.
 

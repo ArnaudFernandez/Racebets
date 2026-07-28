@@ -142,9 +142,38 @@ public class RaceWorkflowService {
             throw new ConflictException("Bets must be closed before publishing the result");
         }
 
+        applyResult(raceId, orderedEntryIds);
+        race.setState(RaceState.FINISHED);
+        race.setFinishedAt(Instant.now());
+        raceRepository.save(race);
+        return snapshot(race);
+    }
+
+    @Transactional
+    public void correctResult(Long raceId, List<Long> expectedOrderedEntryIds, List<Long> orderedEntryIds) {
+        Race race = findLockedRace(raceId);
+        if (race.getState() != RaceState.FINISHED) {
+            throw new ConflictException("Only a finished race result can be corrected");
+        }
+
+        List<RaceEntry> entries = raceEntryRepository.findAllByRace_Id(raceId, Sort.by("rank").ascending());
+        List<Long> currentOrder = entries.stream().map(RaceEntry::getId).toList();
+        if (!currentOrder.equals(expectedOrderedEntryIds)) {
+            throw new ConflictException("The race result has changed; reload it before applying your correction");
+        }
+
+        applyResult(raceId, orderedEntryIds, entries);
+    }
+
+    private void applyResult(Long raceId, List<Long> orderedEntryIds) {
         List<RaceEntry> entries = raceEntryRepository.findAllByRace_Id(raceId, Sort.by("horseNumber").ascending());
+        applyResult(raceId, orderedEntryIds, entries);
+    }
+
+    private void applyResult(Long raceId, List<Long> orderedEntryIds, List<RaceEntry> entries) {
         Set<Long> expectedIds = entries.stream().map(RaceEntry::getId).collect(Collectors.toSet());
-        if (orderedEntryIds.size() != entries.size()
+        if (orderedEntryIds == null || entries.isEmpty()
+                || orderedEntryIds.size() != entries.size()
                 || new HashSet<>(orderedEntryIds).size() != orderedEntryIds.size()
                 || !expectedIds.equals(new HashSet<>(orderedEntryIds))) {
             throw new ConflictException("The finish order must contain every runner exactly once");
@@ -168,10 +197,6 @@ public class RaceWorkflowService {
 
         raceEntryRepository.saveAll(entries);
         betRepository.saveAll(bets);
-        race.setState(RaceState.FINISHED);
-        race.setFinishedAt(Instant.now());
-        raceRepository.save(race);
-        return snapshot(race);
     }
 
     private RaceControlResponse snapshot(Race race) {
