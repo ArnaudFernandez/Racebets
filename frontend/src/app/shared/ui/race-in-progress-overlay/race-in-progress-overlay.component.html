@@ -3,9 +3,16 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="race-progress-title"
+  aria-describedby="race-progress-status"
 >
   <div class="race-progress-content">
+    <div class="race-progress-heading">
+      @if (raceImgUrl(); as imageUrl) {
+        <img class="race-image" [src]="imageUrl" [alt]="'Visuel de la course ' + raceName()" />
+      }
+      <p id="race-progress-status">Course en cours</p>
+      <h1 id="race-progress-title" aria-live="assertive">{{ raceName() }}</h1>
+    </div>
     <canvas #animationCanvas class="race-animation" aria-hidden="true"></canvas>
-    <h1 id="race-progress-title" aria-live="assertive">Course en cours.</h1>
   </div>
 </section>

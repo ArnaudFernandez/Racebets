@@ -64,6 +64,12 @@ export class AdminApiService {
     return firstValueFrom(this.http.put<RaceAdminResponse>(`${this.baseUrl}/races/${id}`, request));
   }
 
+  uploadRaceImage(id: number, image: File): Promise<RaceAdminResponse> {
+    const data = new FormData();
+    data.append('image', image);
+    return firstValueFrom(this.http.post<RaceAdminResponse>(`${this.baseUrl}/races/${id}/image`, data));
+  }
+
   deleteRace(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/races/${id}`));
   }
@@ -78,6 +84,19 @@ export class AdminApiService {
 
   publishRaceResult(id: number, orderedEntryIds: readonly number[]): Promise<RaceControl> {
     return firstValueFrom(this.http.post<RaceControl>(`${this.baseUrl}/races/${id}/result`, { orderedEntryIds }));
+  }
+
+  correctRaceResult(
+    id: number,
+    expectedOrderedEntryIds: readonly number[],
+    orderedEntryIds: readonly number[]
+  ): Promise<RaceHistoryDetail> {
+    return firstValueFrom(
+      this.http.put<RaceHistoryDetail>(`${this.baseUrl}/race-history/${id}/result`, {
+        expectedOrderedEntryIds,
+        orderedEntryIds
+      })
+    );
   }
 
   selectRaceRunners(id: number, horseIds: readonly number[]): Promise<RaceControl> {
@@ -111,5 +130,4 @@ export class AdminApiService {
   deletePartner(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/partners/${id}`));
   }
-
 }

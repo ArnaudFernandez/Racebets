@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TuiButton, TuiLoader } from '@taiga-ui/core';
+import { TuiButton, TuiDialog, TuiLoader } from '@taiga-ui/core';
 import { TuiBadge } from '@taiga-ui/kit';
 
 import { HorseAdminResponse, RaceControl, RaceControlEntry, RaceState } from '../models/admin-api.model';
+import { RaceOrderListComponent } from '../race-order-list/race-order-list.component';
 import { AdminApiService } from '../services/admin-api.service';
 
 const NEXT_STATE: Partial<Record<RaceState, RaceState>> = {
@@ -13,10 +14,11 @@ const NEXT_STATE: Partial<Record<RaceState, RaceState>> = {
   BET_STARTING: 'BETTING',
   BETTING: 'BET_CLOSED'
 };
+const RACE_REFRESH_ERROR = 'Impossible d’actualiser la course pour le moment.';
 
 @Component({
   selector: 'app-race-control-page',
-  imports: [RouterLink, TuiBadge, TuiButton, TuiLoader],
+  imports: [RaceOrderListComponent, RouterLink, TuiBadge, TuiButton, TuiDialog, TuiLoader],
   templateUrl: './race-control-page.component.html',
   styleUrl: './race-control-page.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,10 +28,15 @@ export class RaceControlPageComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly raceId = Number(this.route.snapshot.paramMap.get('raceId'));
   private readonly pollId: number;
+  private refreshing = false;
+  private requestVersion = 0;
 
   readonly race = signal<RaceControl | null>(null);
   readonly horses = signal<readonly HorseAdminResponse[]>([]);
   readonly arrivalOrder = signal<readonly number[]>([]);
+  readonly expectedResultOrder = signal<readonly number[]>([]);
+  readonly editingResult = signal(false);
+  readonly correctionDialogOpen = signal(false);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -44,11 +51,19 @@ export class RaceControlPageComponent implements OnDestroy {
     return this.arrivalOrder().map((id) => byId.get(id)).filter((entry): entry is RaceControlEntry => entry !== undefined);
   });
   readonly maxBetCount = computed(() => Math.max(1, ...this.race()?.entries.map((entry) => entry.betCount) ?? [1]));
+  readonly resultChanged = computed(() => {
+    const expected = this.expectedResultOrder();
+    const current = this.arrivalOrder();
+    return expected.length === current.length && expected.some((id, index) => current[index] !== id);
+  });
+  readonly originalWinnerName = computed(() => this.entryName(this.expectedResultOrder()[0]));
+  readonly correctedWinnerName = computed(() => this.entryName(this.arrivalOrder()[0]));
+  readonly winnerChanged = computed(() => this.originalWinnerName() !== this.correctedWinnerName());
 
   constructor() {
     void this.load();
     this.pollId = window.setInterval(() => {
-      if (!this.loading()) void this.refresh(false);
+      if (!this.loading() && !this.editingResult() && !this.correctionDialogOpen()) void this.refresh();
     }, 1500);
   }
 
@@ -99,13 +114,14 @@ export class RaceControlPageComponent implements OnDestroy {
     });
   }
 
-  protected move(entryId: number, direction: -1 | 1): void {
-    const order = [...this.arrivalOrder()];
-    const from = order.indexOf(entryId);
-    const to = from + direction;
-    if (from < 0 || to < 0 || to >= order.length) return;
-    [order[from], order[to]] = [order[to], order[from]];
-    this.arrivalOrder.set(order);
+  protected reorderEntries(order: readonly number[]): void {
+    const race = this.race();
+    const editable = race?.state === 'BET_CLOSED' || (race?.state === 'FINISHED' && this.editingResult());
+    if (!editable || this.loading()) return;
+    if (order.length !== race.entries.length || new Set(order).size !== order.length) return;
+    const entryIds = new Set(race.entries.map((entry) => entry.entryId));
+    if (!order.every((entryId) => entryIds.has(entryId))) return;
+    this.arrivalOrder.set([...order]);
   }
 
   protected async publishResult(): Promise<void> {
@@ -114,6 +130,67 @@ export class RaceControlPageComponent implements OnDestroy {
       this.applyRace(await this.adminApi.publishRaceResult(this.raceId, this.arrivalOrder()), true);
       this.success.set('Résultat envoyé à tous les participants.');
     });
+  }
+
+  protected editResult(): void {
+    const race = this.race();
+    if (race?.state !== 'FINISHED' || this.loading()) return;
+    const order = this.officialOrder(race);
+    this.expectedResultOrder.set(order);
+    this.arrivalOrder.set(order);
+    this.editingResult.set(true);
+    this.error.set(null);
+    this.success.set(null);
+  }
+
+  protected cancelResultEdition(): void {
+    this.correctionDialogOpen.set(false);
+    this.editingResult.set(false);
+    this.arrivalOrder.set(this.expectedResultOrder());
+    this.expectedResultOrder.set([]);
+  }
+
+  protected requestResultCorrection(): void {
+    if (!this.resultChanged() || this.loading()) return;
+    this.correctionDialogOpen.set(true);
+  }
+
+  protected cancelResultCorrection(): void {
+    this.correctionDialogOpen.set(false);
+  }
+
+  protected async confirmResultCorrection(): Promise<void> {
+    if (!this.resultChanged() || this.loading()) return;
+    this.correctionDialogOpen.set(false);
+    this.requestVersion++;
+    this.loading.set(true);
+    this.error.set(null);
+    this.success.set(null);
+    try {
+      const history = await this.adminApi.correctRaceResult(
+        this.raceId,
+        this.expectedResultOrder(),
+        this.arrivalOrder()
+      );
+      const ranks = new Map(history.result.map((entry) => [entry.entryId, entry.rank]));
+      const race = this.race();
+      if (race !== null) {
+        this.applyRace({
+          ...race,
+          entries: race.entries.map((entry) => ({
+            ...entry,
+            rank: ranks.get(entry.entryId) ?? entry.rank
+          }))
+        }, true);
+      }
+      this.editingResult.set(false);
+      this.expectedResultOrder.set([]);
+      this.success.set('Le classement et les résultats des joueurs ont été corrigés.');
+    } catch (error: unknown) {
+      await this.handleCorrectionError(error);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   protected stateLabel(state: RaceState): string {
@@ -139,26 +216,38 @@ export class RaceControlPageComponent implements OnDestroy {
     return entry.betCount / this.maxBetCount() * 100;
   }
 
-  private async refresh(resetOrder: boolean): Promise<void> {
+  private async refresh(): Promise<void> {
+    if (this.refreshing) return;
+    this.refreshing = true;
+    const requestVersion = this.requestVersion;
     try {
-      this.applyRace(await this.adminApi.getRaceControl(this.raceId), resetOrder);
-      this.error.set(null);
-    } catch (error: unknown) {
-      this.error.set(this.errorMessage(error));
+      const race = await this.adminApi.getRaceControl(this.raceId);
+      if (requestVersion !== this.requestVersion || this.editingResult() || this.correctionDialogOpen()) return;
+      this.applyRace(race, race.state === 'FINISHED');
+      if (this.error() === RACE_REFRESH_ERROR) this.error.set(null);
+    } catch {
+      if (requestVersion !== this.requestVersion) return;
+      this.error.set(RACE_REFRESH_ERROR);
+    } finally {
+      this.refreshing = false;
     }
   }
 
   private async load(): Promise<void> {
+    this.refreshing = true;
     try {
       const [race, horses] = await Promise.all([
         this.adminApi.getRaceControl(this.raceId),
         this.adminApi.findHorses()
       ]);
       this.horses.set(horses);
+      if (this.editingResult() || this.correctionDialogOpen()) return;
       this.applyRace(race, true);
       this.error.set(null);
     } catch (error: unknown) {
       this.error.set(this.errorMessage(error));
+    } finally {
+      this.refreshing = false;
     }
   }
 
@@ -174,7 +263,35 @@ export class RaceControlPageComponent implements OnDestroy {
     }
   }
 
+  private officialOrder(race: RaceControl): readonly number[] {
+    return [...race.entries]
+      .sort((left, right) => (left.rank ?? left.horseNumber) - (right.rank ?? right.horseNumber))
+      .map((entry) => entry.entryId);
+  }
+
+  private entryName(entryId: number | undefined): string {
+    return this.race()?.entries.find((entry) => entry.entryId === entryId)?.horseName ?? '';
+  }
+
+  private async handleCorrectionError(error: unknown): Promise<void> {
+    if (error instanceof HttpErrorResponse && error.status === 409) {
+      try {
+        this.applyRace(await this.adminApi.getRaceControl(this.raceId), true);
+        this.editingResult.set(false);
+        this.expectedResultOrder.set([]);
+        this.error.set(
+          'Le résultat a été modifié par un autre administrateur. Le classement actuel a été rechargé.'
+        );
+        return;
+      } catch {
+        // Preserve the original conflict when the latest race cannot be loaded.
+      }
+    }
+    this.error.set(this.errorMessage(error));
+  }
+
   private async run(action: () => Promise<void>): Promise<void> {
+    this.requestVersion++;
     this.loading.set(true);
     this.error.set(null);
     this.success.set(null);

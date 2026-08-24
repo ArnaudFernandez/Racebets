@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { TuiButton } from '@taiga-ui/core';
+import { TuiButton, TuiDialog } from '@taiga-ui/core';
 
 import { LiveRace, LiveRunner } from '../models/betting.model';
 import { BettingApiService } from '../services/betting-api.service';
@@ -9,7 +9,7 @@ import { RaceInProgressOverlayComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-live-betting-board',
-  imports: [TuiButton, RaceInProgressOverlayComponent],
+  imports: [TuiButton, TuiDialog, RaceInProgressOverlayComponent],
   templateUrl: './live-betting-board.component.html',
   styleUrl: './live-betting-board.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -23,10 +23,23 @@ export class LiveBettingBoardComponent {
   readonly changeCandidate = signal<LiveRunner | null>(null);
   readonly actionError = signal<string | null>(null);
   readonly bettingOpen = computed(() => this.race()?.state === 'BETTING');
+  readonly displayedRunners = computed(() => {
+    const race = this.race();
+    if (race === null) return [];
+    return [...race.runners].sort((left, right) =>
+      race.state === 'FINISHED'
+        ? (left.rank ?? left.horseNumber) - (right.rank ?? right.horseNumber)
+        : left.horseNumber - right.horseNumber
+    );
+  });
   readonly partners = signal<readonly PublicPartner[]>([]);
 
   constructor() {
-    effect(() => this.race.set(this.bettingApi.liveRace()));
+    effect(() => {
+      const race = this.bettingApi.liveRace();
+      this.race.set(race);
+      if (race?.state !== 'BETTING') this.changeCandidate.set(null);
+    });
     void this.loadPartners();
   }
 
@@ -54,6 +67,10 @@ export class LiveBettingBoardComponent {
 
   protected cancelChange(): void {
     this.changeCandidate.set(null);
+  }
+
+  protected changeDialogOpenChange(open: boolean): void {
+    if (!open) this.cancelChange();
   }
 
   protected confirmChange(): void {

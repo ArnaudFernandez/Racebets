@@ -1,182 +1,82 @@
 <section class="quiz-admin">
-  @if (error(); as message) {
-    <p class="message error" role="alert">{{ message }}</p>
-  }
-  @if (success(); as message) {
-    <p class="message success" role="status">{{ message }}</p>
-  }
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+  @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
 
-  @if (deleteTarget(); as quizSet) {
+  @if (deleteTarget(); as quiz) {
     <section class="confirm-panel" tuiCardLarge="compact" role="alertdialog" aria-labelledby="delete-quiz-title">
       <div>
-        <h2 id="delete-quiz-title">Supprimer ce quiz ?</h2>
-        <p>{{ quizSet.title }} et ses sessions seront supprimes.</p>
+        <h2 id="delete-quiz-title">Supprimer ce questionnaire ?</h2>
+        <p><strong>{{ quiz.title }}</strong> et tout son historique seront définitivement supprimés.</p>
       </div>
-      <div class="form-actions">
+      <div class="row-actions">
         <button tuiButton type="button" size="s" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmDelete()">Supprimer</button>
         <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelDelete()">Annuler</button>
       </div>
     </section>
   }
 
-  <section class="quiz-grid">
-    <article tuiCardLarge="compact">
-      <header tuiHeader="body-m">
-        <hgroup tuiTitle>
-          <h2>{{ editingQuizSetId() === null ? 'Nouvel ensemble de questions' : 'Modifier l ensemble' }}</h2>
-        </hgroup>
-      </header>
+  @if (activeSession(); as session) {
+    <section class="live-banner">
+      <div class="live-signal" aria-hidden="true"><span></span> LIVE</div>
+      <div class="live-copy">
+        <small>Session en cours</small>
+        <strong>{{ session.title }}</strong>
+        <span>{{ phaseLabel(session.phase) }} · {{ session.participantCount }} participant{{ session.participantCount > 1 ? 's' : '' }}</span>
+      </div>
+      <button tuiButton type="button" size="m" (click)="controlSession(session.id)">Reprendre le pilotage →</button>
+    </section>
+  } @else {
+    <section class="ready-banner">
+      <div><strong>Aucune session en cours</strong><span>Vous pouvez lancer l’un de vos quiz depuis le tableau.</span></div>
+      <span tuiBadge size="m" appearance="positive">Disponible</span>
+    </section>
+  }
 
-      <form class="form" [formGroup]="quizForm" (ngSubmit)="submitQuizSet()">
-        <tui-textfield>
-          <input tuiInput formControlName="title" placeholder="Titre du quiz" />
-        </tui-textfield>
+  <article class="quiz-list" tuiCardLarge="compact">
+    <header class="list-head" tuiHeader="body-m">
+      <hgroup tuiTitle>
+        <h2>Mes quiz</h2>
+        <p tuiSubtitle>{{ quizSets().length }} questionnaire{{ quizSets().length > 1 ? 's' : '' }} prêt{{ quizSets().length > 1 ? 's' : '' }} à animer</p>
+      </hgroup>
+      <div class="head-actions">
+        <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading()" (click)="refresh()">Actualiser</button>
+        <button tuiButton type="button" size="m" (click)="createQuiz()">Nouveau questionnaire</button>
+      </div>
+    </header>
 
-        <div formArrayName="questions" class="questions">
-          @for (question of questions.controls; track $index; let questionIndex = $index) {
-            <section class="question-block" [formGroupName]="questionIndex">
-              <div class="block-heading">
-                <strong>Question {{ questionIndex + 1 }}</strong>
-                <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="removeQuestion(questionIndex)">
-                  Retirer
-                </button>
-              </div>
-
-              <tui-textfield>
-                <input tuiInput formControlName="text" placeholder="Question" />
-              </tui-textfield>
-
-              <tui-textfield>
-                <input tuiInput type="number" formControlName="durationSeconds" placeholder="Chrono en secondes" />
-              </tui-textfield>
-
-              <div class="image-fields">
-                <label class="field-label">
-                  Image de question
-                  <input type="file" accept="image/png,image/jpeg,image/webp" (change)="setImage($event, questionIndex, 'questionImageDataUrl')" />
-                </label>
-                @if (question.get('questionImageDataUrl')?.value) {
-                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="clearImage(questionIndex, 'questionImageDataUrl')">
-                    Retirer image question
-                  </button>
-                }
-
-                <label class="field-label">
-                  Image de reponse
-                  <input type="file" accept="image/png,image/jpeg,image/webp" (change)="setImage($event, questionIndex, 'answerImageDataUrl')" />
-                </label>
-                @if (question.get('answerImageDataUrl')?.value) {
-                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="clearImage(questionIndex, 'answerImageDataUrl')">
-                    Retirer image reponse
-                  </button>
-                }
-              </div>
-
-              <div formArrayName="answers" class="answers">
-                @for (answer of answers(questionIndex).controls; track $index; let answerIndex = $index) {
-                  <div class="answer-row" [formGroupName]="answerIndex">
-                    <input class="correct-radio" type="radio" [name]="'correct-' + questionIndex" [checked]="answer.get('correct')?.value === true" (change)="markCorrect(questionIndex, answerIndex)" />
-                    <tui-textfield>
-                      <input tuiInput formControlName="text" placeholder="Reponse possible" />
-                    </tui-textfield>
-                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="removeAnswer(questionIndex, answerIndex)">
-                      Retirer
-                    </button>
-                  </div>
-                }
-              </div>
-
-              <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="answers(questionIndex).length >= 4" (click)="addAnswer(questionIndex)">
-                Ajouter une reponse
-              </button>
-            </section>
-          }
-        </div>
-
-        <div class="form-actions">
-          <button tuiButton type="button" size="s" appearance="secondary" (click)="addQuestion()">Ajouter une question</button>
-          <button tuiButton type="submit" size="s" [disabled]="loading()">{{ editingQuizSetId() === null ? 'Creer' : 'Enregistrer' }}</button>
-          <button tuiButton type="button" size="s" appearance="secondary" (click)="resetForm()">Reinitialiser</button>
-        </div>
-      </form>
-    </article>
-
-    <article tuiCardLarge="compact">
-      <header tuiHeader="body-m">
-        <hgroup tuiTitle>
-          <h2>Ensembles sauvegardés</h2>
-          <p tuiSubtitle>{{ quizSets().length }} quiz</p>
-        </hgroup>
-        <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Rafraichir</button>
-      </header>
-
+    @if (loading() && quizSets().length === 0) {
+      <div class="loading-state"><tui-loader size="m" /><span>Chargement de vos quiz…</span></div>
+    } @else {
       <div class="table-wrap">
-        <table>
+        <table tuiTable size="m" [columns]="columns">
           <thead>
-            <tr><th>Titre</th><th>Questions</th><th>Actions</th></tr>
+            <tr><th>Titre</th><th>Questions</th><th>État</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            @for (quizSet of quizSets(); track quizSet.id) {
+            @for (quiz of quizSets(); track quiz.id) {
               <tr>
-                <td data-label="Titre">{{ quizSet.title }}</td>
-                <td data-label="Questions">{{ quizSet.questionCount }}</td>
+                <td data-label="Titre"><div class="quiz-title"><strong>{{ quiz.title }}</strong><small>Quiz #{{ quiz.id }}</small></div></td>
+                <td data-label="Questions"><span class="question-count">{{ quiz.questionCount }}</span> question{{ quiz.questionCount > 1 ? 's' : '' }}</td>
+                <td data-label="État">
+                  @if (isLiveQuiz(quiz.id)) { <span tuiBadge size="s" appearance="positive">En direct</span> }
+                  @else { <span tuiBadge size="s" appearance="neutral">Prêt</span> }
+                </td>
                 <td class="row-actions" data-label="Actions">
-                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="editQuizSet(quizSet)">Editer</button>
-                  <button tuiButton type="button" size="xs" (click)="openSession(quizSet.id)">Ouvrir</button>
-                  <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestDeleteQuizSet(quizSet)">Supprimer</button>
+                  @if (isLiveQuiz(quiz.id)) {
+                    <button tuiButton type="button" size="xs" (click)="controlSession(activeSession()!.id)">Piloter</button>
+                  } @else {
+                    <button tuiButton type="button" size="xs" [disabled]="activeSession() !== null || loading()" (click)="launch(quiz.id)">Lancer</button>
+                  }
+                  <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="isLiveQuiz(quiz.id)" (click)="editQuiz(quiz)">Modifier</button>
+                  <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="isLiveQuiz(quiz.id)" (click)="requestDelete(quiz)">Supprimer</button>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="3" class="empty">Aucun quiz.</td></tr>
+              <tr><td colspan="4"><div class="empty-state"><strong>Créez votre premier questionnaire</strong><p>Préparez les questions, les visuels, le chrono et les bonnes réponses depuis un écran dédié.</p><button tuiButton type="button" size="m" (click)="createQuiz()">Nouveau questionnaire</button></div></td></tr>
             }
           </tbody>
         </table>
       </div>
-    </article>
-  </section>
-
-  <article tuiCardLarge="compact">
-    <header tuiHeader="body-m">
-      <hgroup tuiTitle>
-        <h2>Sessions live</h2>
-      </hgroup>
-    </header>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Quiz</th><th>Etat</th><th>Question</th><th>Participants</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          @for (session of sortedLiveSessions(); track session.id) {
-            <tr>
-              <td data-label="Quiz">{{ session.title }}</td>
-              <td data-label="Etat"><span tuiBadge size="s" [appearance]="sessionPhaseAppearance(session.phase)">{{ session.phase }}</span></td>
-              <td data-label="Question">{{ session.currentQuestionIndex < 0 ? '-' : session.currentQuestionIndex + 1 }} / {{ session.questionCount }}</td>
-              <td data-label="Participants">{{ session.participantCount }}</td>
-              <td class="row-actions" data-label="Actions">
-                @if (session.phase === 'OPENING') {
-                  <button tuiButton type="button" size="xs" (click)="transition(session.id, 'start')">Lancer</button>
-                }
-                @if (session.phase === 'QUESTION_OPEN') {
-                  <button tuiButton type="button" size="xs" (click)="transition(session.id, 'lock')">Stop reponses</button>
-                }
-                @if (session.phase === 'QUESTION_LOCKED') {
-                  <button tuiButton type="button" size="xs" (click)="transition(session.id, 'reveal')">Reveler</button>
-                }
-                @if (session.phase === 'ANSWER_REVEALED') {
-                  <button tuiButton type="button" size="xs" (click)="transition(session.id, 'scoreboard')">Scores</button>
-                }
-                @if (session.phase === 'SCOREBOARD') {
-                  <button tuiButton type="button" size="xs" (click)="transition(session.id, 'next')">Question suivante</button>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="5" class="empty">Aucune session ouverte.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    }
   </article>
 </section>

@@ -31,6 +31,7 @@ export class AppComponent {
     { initialValue: this.router.url }
   );
   readonly logoutDialogOpen = signal(false);
+  readonly tutorialActive = computed(() => this.currentUrl().split('?')[0] === '/tutorial');
   readonly raceInProgressOnBettingPage = computed(
     () => this.currentUrl().split('?')[0] === '/' && this.bettingApi.liveRace()?.state === 'BET_CLOSED'
   );
@@ -54,6 +55,6 @@ export class AppComponent {
   protected async confirmLogout(): Promise<void> {
     this.logoutDialogOpen.set(false);
     this.auth.logout();
-    await this.router.navigateByUrl(this.features.defaultPath());
+    await this.router.navigateByUrl('/login');
   }
 }

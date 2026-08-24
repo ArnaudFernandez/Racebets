@@ -1,0 +1,108 @@
+<main class="editor-shell">
+  <a class="back-link" routerLink="/admin" [queryParams]="{section: 'quizzes'}">← Retour à Mes quiz</a>
+
+  <header class="editor-hero">
+    <div>
+      <span class="eyebrow">QUIZ · {{ editing ? 'MODIFICATION' : 'CRÉATION' }}</span>
+      <h1>{{ editing ? 'Modifier le questionnaire' : 'Nouveau questionnaire' }}</h1>
+      <p>Construisez votre quiz question par question. Les changements ne sont publiés qu’à l’enregistrement.</p>
+    </div>
+    <button tuiButton type="button" size="l" [disabled]="saving() || loading()" (click)="save()">
+      {{ saving() ? 'Enregistrement…' : editing ? 'Enregistrer les modifications' : 'Créer le questionnaire' }}
+    </button>
+  </header>
+
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+
+  @if (loading()) {
+    <section class="loading-page"><tui-loader size="xl" /><p>Chargement du questionnaire…</p></section>
+  } @else {
+    <form [formGroup]="quizForm" (ngSubmit)="save()">
+      <section class="identity-panel">
+        <div><span class="step-number">01</span><div><h2>Titre du quiz</h2></div></div>
+        <tui-textfield><input tuiInput formControlName="title" placeholder="Ex. Les légendes de l’hippodrome" /></tui-textfield>
+      </section>
+
+      <section class="builder" formArrayName="questions">
+        <aside class="question-nav">
+          <header><div><span class="step-number">02</span><h2>Questions</h2></div><span>{{ completedQuestions() }}/{{ questions.length }} complètes</span></header>
+          <ol>
+            @for (question of questions.controls; track question; let index = $index) {
+              <li>
+                <button type="button" [class.active]="selectedQuestionIndex() === index" [class.complete]="question.valid" (click)="selectQuestion(index)">
+                  <span>{{ index + 1 }}</span><span><strong>{{ question.get('text')?.value || 'Question sans titre' }}</strong><small>{{ answers(index).length }} réponses · {{ question.get('durationSeconds')?.value }} s</small></span>
+                </button>
+              </li>
+            }
+          </ol>
+          <button tuiButton type="button" size="m" appearance="secondary" (click)="addQuestion()">+ Ajouter une question</button>
+        </aside>
+
+        @for (question of questions.controls; track question; let questionIndex = $index) {
+          @if (selectedQuestionIndex() === questionIndex) {
+            <article class="question-editor" [formGroupName]="questionIndex">
+              <header class="question-head">
+                <div><span>Question {{ questionIndex + 1 }} sur {{ questions.length }}</span><h2>Contenu de la question</h2></div>
+                <div class="compact-actions">
+                  <button type="button" aria-label="Déplacer vers le haut" [disabled]="questionIndex === 0" (click)="moveQuestion(questionIndex, -1)">↑</button>
+                  <button type="button" aria-label="Déplacer vers le bas" [disabled]="questionIndex === questions.length - 1" (click)="moveQuestion(questionIndex, 1)">↓</button>
+                  <button type="button" aria-label="Dupliquer" (click)="duplicateQuestion(questionIndex)">⧉</button>
+                  <button class="danger" type="button" aria-label="Supprimer" [disabled]="questions.length === 1" (click)="removeQuestion(questionIndex)">×</button>
+                </div>
+              </header>
+
+              <label class="field-copy" for="question-{{ questionIndex }}">Question <span>500 caractères maximum</span></label>
+              <tui-textfield><input tuiInput id="question-{{ questionIndex }}" formControlName="text" placeholder="Saisissez la question posée aux participants" /></tui-textfield>
+
+              <div class="duration-field">
+                <div><strong>Temps de réponse</strong><small>Entre 5 secondes et 5 minutes</small></div>
+                <tui-textfield><input tuiInput type="number" min="5" max="300" formControlName="durationSeconds" aria-label="Durée en secondes" /></tui-textfield><span>secondes</span>
+              </div>
+
+              <section class="media-section">
+                <header><div><h3>Visuels</h3><p>PNG, JPEG ou WebP · 5 Mo maximum par image</p></div><span>Optionnel</span></header>
+                <div class="media-grid">
+                  <label class="upload-zone" [class.has-image]="question.get('questionImageDataUrl')?.value">
+                    @if (question.get('questionImageDataUrl')?.value; as image) { <img [src]="image" alt="Aperçu de la question" /><span>Remplacer l’image de question</span> }
+                    @else { <strong>Image de question</strong><span>Affichée pendant les réponses</span><small>Choisir un fichier</small> }
+                    <input type="file" accept="image/png,image/jpeg,image/webp" (change)="setImage($event, 'questionImageDataUrl')" />
+                  </label>
+                  <label class="upload-zone" [class.has-image]="question.get('answerImageDataUrl')?.value">
+                    @if (question.get('answerImageDataUrl')?.value; as image) { <img [src]="image" alt="Aperçu de la réponse" /><span>Remplacer l’image de réponse</span> }
+                    @else { <strong>Image de réponse</strong><span>Affichée lors de la révélation</span><small>Choisir un fichier</small> }
+                    <input type="file" accept="image/png,image/jpeg,image/webp" (change)="setImage($event, 'answerImageDataUrl')" />
+                  </label>
+                </div>
+                <div class="image-actions">
+                  @if (question.get('questionImageDataUrl')?.value) { <button type="button" (click)="clearImage('questionImageDataUrl')">Retirer l’image de question</button> }
+                  @if (question.get('answerImageDataUrl')?.value) { <button type="button" (click)="clearImage('answerImageDataUrl')">Retirer l’image de réponse</button> }
+                </div>
+              </section>
+
+              <section class="answers-section" formArrayName="answers">
+                <header><div><h3>Réponses</h3><p>Sélectionnez la seule bonne réponse à l’aide du bouton radio.</p></div><span>{{ answers().length }}/4</span></header>
+                <div class="answer-list">
+                  @for (answer of answers().controls; track answer; let answerIndex = $index) {
+                    <div class="answer-card" [formGroupName]="answerIndex" [class.correct]="answer.get('correct')?.value">
+                      <input type="radio" [name]="'correct-' + questionIndex" [checked]="answer.get('correct')?.value" [attr.aria-label]="'Définir la réponse ' + (answerIndex + 1) + ' comme correcte'" (change)="markCorrect(answerIndex)" />
+                      <span class="answer-letter">{{ ['A', 'B', 'C', 'D'][answerIndex] }}</span>
+                      <tui-textfield><input tuiInput formControlName="text" [placeholder]="'Réponse ' + (answerIndex + 1)" /></tui-textfield>
+                      <span class="correct-label">{{ answer.get('correct')?.value ? 'Bonne réponse' : '' }}</span>
+                      <button type="button" aria-label="Retirer cette réponse" [disabled]="answers().length <= 2" (click)="removeAnswer(answerIndex)">×</button>
+                    </div>
+                  }
+                </div>
+                <button tuiButton type="button" size="s" appearance="secondary" [disabled]="answers().length >= 4" (click)="addAnswer()">+ Ajouter une réponse</button>
+              </section>
+            </article>
+          }
+        }
+      </section>
+
+      <footer class="save-bar">
+        <div><strong>{{ questions.length }} question{{ questions.length > 1 ? 's' : '' }}</strong><span>{{ completedQuestions() === questions.length ? 'Le questionnaire est prêt à être enregistré.' : 'Certaines questions restent à compléter.' }}</span></div>
+        <button tuiButton type="submit" size="l" [disabled]="saving()">{{ saving() ? 'Enregistrement…' : editing ? 'Enregistrer les modifications' : 'Créer le questionnaire' }}</button>
+      </footer>
+    </form>
+  }
+</main>

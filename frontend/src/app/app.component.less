@@ -40,7 +40,7 @@
 .logout-dialog > div { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: flex-end; margin-block-start: .35rem; }
 
 @media (max-width: 58rem) {
-  .app-frame { padding-block-end: calc(4.75rem + env(safe-area-inset-bottom)); }
+  .app-frame.authenticated { padding-block-end: calc(4.75rem + env(safe-area-inset-bottom)); }
   .app-topbar { grid-template-columns: 1fr auto; min-block-size: 3.75rem; padding: .55rem 1rem; }
   .desktop-nav, .user-name { display: none; }
   .login-link { display: none; }

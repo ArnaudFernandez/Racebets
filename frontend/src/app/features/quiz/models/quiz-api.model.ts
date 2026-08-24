@@ -63,7 +63,9 @@ export interface QuizScoreResponse {
 }
 
 export interface QuizSessionSnapshotResponse extends QuizSessionSummaryResponse {
+  readonly serverTime?: string;
   readonly phaseStartedAt: string | null;
+  readonly questionEndsAt?: string | null;
   readonly joined: boolean;
   readonly selectedAnswerId: number | null;
   readonly correctAnswerId: number | null;

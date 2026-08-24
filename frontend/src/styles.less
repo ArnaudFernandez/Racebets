@@ -58,6 +58,15 @@ tui-textfield { --tui-radius-m: .75rem; }
 .empty-state strong { color: var(--rb-ink); }
 .empty-state p { margin: 0; line-height: 1.5; }
 
+.race-context-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem; align-items: end; padding: 1.5rem; border-radius: 1.25rem; background: var(--race-hero-background, #143c2a); color: white; box-shadow: var(--rb-shadow); }
+.race-context-hero.has-race-image { grid-template-columns: auto minmax(0, 1fr) auto; }
+.race-context-image { display: block; inline-size: 7rem; block-size: 5rem; padding: .35rem; border-radius: .8rem; background: rgba(255, 255, 255, .94); object-fit: contain; }
+.race-context-copy { min-inline-size: 0; }
+.race-context-meta { color: rgba(255, 255, 255, .62); font-size: .8rem; }
+.race-context-hero h1 { max-inline-size: 24ch; margin: .35rem 0; font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1; letter-spacing: -.055em; overflow-wrap: anywhere; text-wrap: balance; }
+.race-context-state { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; color: rgba(255, 255, 255, .72); font-size: .85rem; }
+.race-context-state strong { color: white; }
+
 .table-wrap { overflow-x: auto; margin-block-start: 1rem; scrollbar-width: thin; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: .9rem .75rem; text-align: start; border-block-end: 1px solid var(--rb-line); vertical-align: middle; }
@@ -66,6 +75,11 @@ tbody tr { transition: background .15s ease; }
 tbody tr:hover { background: #fafbf9; }
 
 @media (max-width: 46rem) {
+  .race-context-hero { grid-template-columns: 1fr; gap: .85rem; align-items: center; padding: 1rem; }
+  .race-context-hero.has-race-image { grid-template-columns: 4.5rem minmax(0, 1fr); }
+  .race-context-image { inline-size: 4.5rem; block-size: 4.5rem; }
+  .race-context-hero h1 {font-size: clamp(1.75rem, 8.5vw, 2.1rem); }
+  .race-context-hero > [tuiButton], .race-context-hero > [tuiBadge] { grid-column: 1 / -1; inline-size: 100%; }
   table, thead, tbody, tr, th, td { display: block; }
   thead { display: none; }
   tbody { display: grid; gap: .625rem; }

@@ -7,12 +7,12 @@
   z-index: 100;
   inset: 0;
   display: grid;
-  place-items: center;
-  overflow: hidden;
+  place-items: safe center;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: clamp(1rem, 4vw, 2rem);
   background:
-    radial-gradient(circle at 50% 42%, rgba(19, 115, 66, .11), transparent 34rem),
-    var(--rb-paper);
+    radial-gradient(circle at 50% 42%, rgba(19, 115, 66, 0.11), transparent 34rem), var(--rb-paper);
   color: var(--rb-ink);
   text-align: center;
 }
@@ -20,21 +20,45 @@
 .race-progress-content {
   display: grid;
   justify-items: center;
-  gap: clamp(.75rem, 2vh, 1.25rem);
-  max-block-size: 100%;
+  gap: clamp(1rem, 2vh, 1.5rem);
+}
+
+.race-progress-heading {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.55rem, 1.5vh, 0.9rem);
+}
+
+.race-image {
+  display: block;
+  inline-size: min(13rem, 48vw);
+  block-size: clamp(3.5rem, 9vh, 5.5rem);
+  margin-block-end: clamp(0.25rem, 1vh, 0.75rem);
+  object-fit: contain;
+}
+
+#race-progress-status {
+  margin: 0;
+  color: var(--rb-muted);
+  font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
 }
 
 .race-animation {
   display: block;
-  inline-size: clamp(10.75rem, 18vw, 13.5rem);
-  block-size: clamp(14rem, 24vw, 17.75rem);
+  inline-size: clamp(9rem, 16vw, 12rem);
+  block-size: clamp(11rem, 20vw, 15rem);
 }
 
 h1 {
+  max-inline-size: 24ch;
   margin: 0;
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  line-height: 1;
-  letter-spacing: -.05em;
+  font-size: clamp(2.75rem, 7vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 
@@ -44,23 +68,39 @@ h1 {
   }
 
   .race-animation {
-    inline-size: min(11rem, 48vw);
-    block-size: min(14.5rem, 30vh);
+    inline-size: min(9.5rem, 44vw);
+    block-size: min(11.5rem, 25vh);
   }
 
   h1 {
-    font-size: clamp(1.75rem, 7vw, 2.25rem);
+    font-size: clamp(2.35rem, 11vw, 3.5rem);
   }
 }
 
 @media (max-height: 35rem) and (orientation: landscape) {
   .race-progress-content {
-    grid-template-columns: minmax(0, 18rem) auto;
+    grid-template-columns: minmax(7rem, 14rem) minmax(0, 1fr);
     align-items: center;
+    max-inline-size: 60rem;
   }
 
   .race-animation {
+    grid-column: 1;
+    grid-row: 1;
     inline-size: min(9rem, 29vw);
     block-size: min(11.75rem, 56vh);
+  }
+
+  .race-progress-heading {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .race-image {
+    block-size: min(4rem, 18vh);
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.5rem);
   }
 }
