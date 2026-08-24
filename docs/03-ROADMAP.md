@@ -132,6 +132,7 @@ Termine dans ce lot :
 - gestion admin des partenaires avec upload de logo, activation individuelle et affichage sur l'ecran d'attente ;
 - actualisation automatique du lien d'historique personnel sans rechargement ;
 - snapshot REST authentifie et polling temporaire d'une seconde.
+- tutoriel du premier pari : simulation locale sans mutation de course ni quiz, avec completion persistante sur le compte utilisateur.
 
 ### Lot 4 : Docker / CI-CD / Dokploy
 

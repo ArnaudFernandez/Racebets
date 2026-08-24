@@ -29,11 +29,14 @@ class RaceServiceTest {
     @Mock
     private RaceRepository raceRepository;
 
+    @Mock
+    private RaceImageStorage raceImageStorage;
+
     private RaceService raceService;
 
     @BeforeEach
     void setUp() {
-        raceService = new RaceService(raceRepository);
+        raceService = new RaceService(raceRepository, raceImageStorage);
     }
 
     @Test
@@ -93,6 +96,20 @@ class RaceServiceTest {
         RaceResponse response = raceService.update(5L, new RaceRequest("Prix", null, RaceState.BET_CLOSED));
 
         assertThat(response).isEqualTo(new RaceResponse(5L, "Prix", null, RaceState.CREATED));
+    }
+
+    @Test
+    void uploadImageReplacesTheRaceImageAndDeletesTheOldManagedFile() {
+        Race race = race(6L, "Prix", "/api/race-images/11111111-1111-1111-1111-111111111111.png", RaceState.CREATED);
+        var image = org.mockito.Mockito.mock(org.springframework.web.multipart.MultipartFile.class);
+        when(raceRepository.findById(6L)).thenReturn(Optional.of(race));
+        when(raceImageStorage.store(image)).thenReturn("/api/race-images/22222222-2222-2222-2222-222222222222.jpg");
+        when(raceRepository.save(race)).thenReturn(race);
+
+        RaceResponse response = raceService.uploadImage(6L, image);
+
+        assertThat(response.raceImgUrl()).isEqualTo("/api/race-images/22222222-2222-2222-2222-222222222222.jpg");
+        verify(raceImageStorage).delete("/api/race-images/11111111-1111-1111-1111-111111111111.png");
     }
 
     @Test

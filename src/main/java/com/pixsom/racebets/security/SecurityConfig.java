@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.core.annotation.Order;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -32,11 +33,13 @@ public class SecurityConfig {
     private String jwtSecret;
 
     @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers("/api/auth/login", "/api/auth/register", "/api/app/features").permitAll()
+                        auth.requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/providers",
+                                        "/api/auth/oauth/exchange", "/api/auth/google/**", "/api/app/features", "/api/race-images/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/partners/**").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()

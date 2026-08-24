@@ -45,10 +45,17 @@ services:
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-false}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Dokploy}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      GOOGLE_AUTH_ENABLED: ${GOOGLE_AUTH_ENABLED:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_LOGIN_CODE_TTL: ${GOOGLE_LOGIN_CODE_TTL:-PT1M}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=75.0 -Djava.io.tmpdir=/tmp}
       RACEBETS_DEV_ADMIN_ENABLED: ${RACEBETS_DEV_ADMIN_ENABLED:-false}
       RACEBETS_DEV_ADMIN_EMAIL: ${RACEBETS_DEV_ADMIN_EMAIL:-}
       RACEBETS_DEV_ADMIN_ACCESS_CODE: ${RACEBETS_DEV_ADMIN_ACCESS_CODE:-}
+      RACEBETS_RACE_IMAGES_DIRECTORY: /var/lib/racebets/race-images
+    volumes:
+      - race_images_data:/var/lib/racebets/race-images
     expose:
       - "8080"
     networks:
@@ -97,6 +104,7 @@ services:
 
 volumes:
   postgres_data:
+  race_images_data:
 
 networks:
   racebets:

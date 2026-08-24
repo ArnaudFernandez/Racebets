@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import com.pixsom.racebets.admin.race.dto.RaceControlResponse;
@@ -51,6 +53,11 @@ public class RaceAdminController {
     @PutMapping("/{id}")
     public RaceResponse update(@PathVariable Long id, @Valid @RequestBody RaceRequest request) {
         return raceService.update(id, request);
+    }
+
+    @PostMapping(path = "/{id}/image", consumes = "multipart/form-data")
+    public RaceResponse uploadImage(@PathVariable Long id, @RequestParam MultipartFile image) {
+        return raceService.uploadImage(id, image);
     }
 
     @DeleteMapping("/{id}")

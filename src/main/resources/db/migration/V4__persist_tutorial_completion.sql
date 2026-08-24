@@ -1,0 +1,2 @@
+ALTER TABLE app_user
+    ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT FALSE;
