@@ -31,9 +31,12 @@ public class AppUser extends AuditableEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String passwordHash;
     private boolean isPresent;
+
+    @Column(nullable = false)
+    private boolean tutorialCompleted;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)

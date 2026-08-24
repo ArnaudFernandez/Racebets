@@ -415,7 +415,8 @@ l'ordre d'arrivee complet d'une course `FINISHED`. Le service verrouille la cour
 les partants et recalcule les etats `WON` / `LOST` dans la meme transaction. `finishedAt`, les selections et les
 horodatages des paris restent inchanges. La requete contient aussi l'ordre initial vu par l'administrateur ; toute
 correction concurrente rend cette precondition obsolete et provoque un conflit au lieu d'un ecrasement silencieux.
-La reponse retourne directement le detail historique recalcule.
+La reponse retourne directement le detail historique recalcule. Cette correction est accessible depuis le detail
+historique et depuis la console `Piloter` d'une course terminee.
 
 Le frontend ajoute un onglet `Historique` dans le panneau admin et une page de detail dediee. Le lien vers le detail
 conserve l'onglet d'origine dans l'URL, ce qui rend le retour navigateur et le partage d'URL predictibles.
@@ -439,6 +440,9 @@ Le frontend applique egalement un tri explicite par identifiant via des `compute
 reste garanti meme si une autre source ou un cache fournit un tableau non trie. La disponibilite de l'historique
 personnel est controlee toutes les deux secondes tant que la session est active ; le lien apparait donc apres le
 settlement d'une course sans rechargement de page. Ce polling leger pourra etre remplace par un evenement STOMP.
+Lorsque la page d'historique joueur est ouverte, son contenu est expose par un signal Angular alimente toutes les
+secondes via `timer`, `exhaustMap` et `toSignal`. Une correction admin met ainsi a jour automatiquement le gagnant,
+l'etat `WON` / `LOST` et le rang de rapidite sans rechargement, avec une seule requete active a la fois.
 
 ## Partenaires Et Logos
 
@@ -496,3 +500,38 @@ tableaux admin deviennent des fiches etiquetees sous 736 px, les workflows longs
 horizontalement et les actions principales occupent toute la largeur disponible lorsque cela facilite la prise en
 main tactile. Les cibles interactives conservent une taille confortable, un focus visible et leur semantique HTML
 native. Les animations respectent `prefers-reduced-motion`.
+
+## Tutoriel Du Premier Pari
+
+Le premier login ou la premiere inscription d'un utilisateur ouvre la route authentifiee `/tutorial` lorsque
+`AppUser.tutorialCompleted` vaut `false`. Quitter ou terminer appelle
+`POST /api/auth/me/tutorial-completion`, qui identifie le compte depuis le claim JWT `userId` et positionne ce marqueur
+de maniere transactionnelle et idempotente. Le statut est retourne dans `UserProfileResponse` : il reste donc valable
+apres deconnexion, changement de navigateur ou changement d'appareil.
+
+Le `tutorialGuard`, place apres `authenticatedGuard`, redirige aussi toute navigation authentifiee vers `/tutorial`
+tant que la completion n'est pas explicitement `true`. Cette seconde barriere couvre l'inscription, OAuth, la reprise
+d'une session et un profil temporairement depourvu du nouveau champ, sans boucle sur la route du tutoriel elle-meme.
+
+Le parcours utilise un store NgRx Signals local et des fixtures statiques. Il n'injecte ni `BettingApiService`, ni
+`BetHistoryService`, ni aucun service de quiz : la course, le pari, le resultat et l'historique montres sont purement
+pedagogiques. Le voile bloque les zones sans action, la cible utile reste au-dessus du voile et la sortie passe par
+une confirmation Taiga UI. Le retour vers `/` intervient seulement apres confirmation de la persistance serveur ; une
+erreur reseau garde l'utilisateur dans le tutoriel afin qu'il puisse reessayer.
+
+```mermaid
+flowchart LR
+    A[Login ou inscription] --> B{Pari actif et tutoriel absent ?}
+    B -- Non --> H[Destination normale]
+    B -- Oui --> C[Attente fictive]
+    C --> D[Ouverture fictive]
+    D --> E[Choix local obligatoire]
+    E --> F[Course et resultat fictifs]
+    F --> G[Historique gagne et perdu]
+    G --> I[Completion persistée sur le compte]
+    C -. Quitter .-> I
+    D -. Quitter .-> I
+    E -. Quitter .-> I
+    F -. Quitter .-> I
+    I --> J[Accueil des paris]
+```

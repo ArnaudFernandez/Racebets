@@ -13,6 +13,7 @@ public record UserProfileResponse(
         LocalDate birthDate,
         String email,
         boolean present,
+        boolean tutorialCompleted,
         Set<Role> roles
 ) {
     public static UserProfileResponse from(AppUser user) {
@@ -23,6 +24,7 @@ public record UserProfileResponse(
                 user.getBirthDate(),
                 user.getEmail(),
                 user.isPresent(),
+                user.isTutorialCompleted(),
                 user.getRoles()
         );
     }

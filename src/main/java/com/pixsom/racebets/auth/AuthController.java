@@ -7,6 +7,8 @@ import com.pixsom.racebets.auth.dto.UserProfileResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,5 +37,10 @@ public class AuthController {
     @GetMapping("/api/auth/me")
     public UserProfileResponse me(Authentication authentication) {
         return authService.currentUser(authentication);
+    }
+
+    @PostMapping("/api/auth/me/tutorial-completion")
+    public UserProfileResponse completeTutorial(@AuthenticationPrincipal Jwt jwt) {
+        return authService.completeTutorial(jwt.getClaim("userId"));
     }
 }

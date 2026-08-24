@@ -9,6 +9,7 @@ import com.pixsom.racebets.repositories.RaceRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -16,9 +17,11 @@ import java.util.List;
 public class RaceService {
 
     private final RaceRepository raceRepository;
+    private final RaceImageStorage raceImageStorage;
 
-    public RaceService(RaceRepository raceRepository) {
+    public RaceService(RaceRepository raceRepository, RaceImageStorage raceImageStorage) {
         this.raceRepository = raceRepository;
+        this.raceImageStorage = raceImageStorage;
     }
 
     @Transactional(readOnly = true)
@@ -49,9 +52,20 @@ public class RaceService {
     }
 
     @Transactional
+    public RaceResponse uploadImage(Long id, MultipartFile image) {
+        Race race = findRace(id);
+        String previousImageUrl = race.getRaceImgUrl();
+        race.setRaceImgUrl(raceImageStorage.store(image));
+        RaceResponse response = toResponse(raceRepository.save(race));
+        raceImageStorage.delete(previousImageUrl);
+        return response;
+    }
+
+    @Transactional
     public void delete(Long id) {
         Race race = findRace(id);
         raceRepository.delete(race);
+        raceImageStorage.delete(race.getRaceImgUrl());
     }
 
     private Race findRace(Long id) {

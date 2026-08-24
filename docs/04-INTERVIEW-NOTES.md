@@ -266,3 +266,23 @@ Pourquoi valider le type et la taille du logo cote serveur ?
 Reponse : l'attribut `accept` du champ fichier n'est qu'une aide UX et peut etre contourne. Le service impose donc
 une liste blanche de types raster et une limite de 2 Mo avant toute persistence, ce qui protege le stockage et evite
 les contenus actifs comme les SVG arbitraires.
+
+### Tutoriel Du Premier Pari
+
+Le tutoriel est une simulation frontend isolee du domaine reel. Un store NgRx Signals porte sa machine d'etapes et
+des fixtures statiques representent la course, le pari et l'historique. Aucun endpoint de pari n'est appele par la
+simulation : les invariants et l'horodatage des vraies courses restent donc exclusivement controles par le serveur.
+La completion est un marqueur monotone persiste sur `AppUser` par un endpoint authentifie. L'identite vient du claim
+JWT `userId` et non du corps de requete. Le tutoriel ne reapparait donc pas apres deconnexion, effacement du stockage
+navigateur ou changement d'appareil.
+
+Pourquoi ne pas reutiliser directement `BettingApiService` pour la course d'entrainement ?
+
+Reponse : cela melangerait donnees pedagogiques et domaine persiste, imposerait des exceptions serveur aux invariants
+de course et pourrait polluer l'historique. Une fixture locale rend l'isolation explicite et testable.
+
+Pourquoi persister la completion cote serveur plutot que dans `localStorage` ?
+
+Reponse : le besoin est attache au compte et exige que le tutoriel ne reapparaisse jamais. Un stockage navigateur peut
+etre efface et n'est pas partage entre appareils. Le booléen serveur fournit une source de verite durable ; sa mise a
+jour idempotente rend sans danger les doubles clics et nouvelles tentatives reseau.
