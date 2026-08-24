@@ -1,4 +1,12 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  input,
+  viewChild
+} from '@angular/core';
 import { DotLottie } from '@lottiefiles/dotlottie-web';
 
 @Component({
@@ -8,6 +16,9 @@ import { DotLottie } from '@lottiefiles/dotlottie-web';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RaceInProgressOverlayComponent implements AfterViewInit, OnDestroy {
+  readonly raceName = input.required<string>();
+  readonly raceImgUrl = input<string | null>(null);
+
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('animationCanvas');
   private animation: DotLottie | null = null;
 

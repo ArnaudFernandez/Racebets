@@ -81,6 +81,7 @@ export interface RaceHistorySummary {
 }
 
 export interface RaceHistoryResult {
+  readonly entryId: number;
   readonly rank: number;
   readonly horseNumber: number;
   readonly horseName: string;

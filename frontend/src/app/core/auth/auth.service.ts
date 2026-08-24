@@ -2,7 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { AuthSession, LoginRequest, LoginResponse, RegisterRequest, UserProfile, UserRole } from './auth.model';
+import {
+  AuthProviders,
+  AuthSession,
+  LoginRequest,
+  LoginResponse,
+  OAuthCodeExchangeRequest,
+  RegisterRequest,
+  UserProfile,
+  UserRole
+} from './auth.model';
 
 const STORAGE_KEY = 'racebets.auth.session';
 
@@ -30,6 +39,17 @@ export class AuthService {
     return session;
   }
 
+  async providers(): Promise<AuthProviders> {
+    return firstValueFrom(this.http.get<AuthProviders>('/api/auth/providers'));
+  }
+
+  async exchangeOAuthCode(request: OAuthCodeExchangeRequest): Promise<AuthSession> {
+    const response = await firstValueFrom(this.http.post<LoginResponse>('/api/auth/oauth/exchange', request));
+    const session = this.toSession(response);
+    this.storeSession(session);
+    return session;
+  }
+
   async refreshUser(): Promise<UserProfile | null> {
     if (this.sessionState() === null) {
       return null;
@@ -42,6 +62,15 @@ export class AuthService {
     }
 
     this.storeSession({ ...session, roles: user.roles, user });
+    return user;
+  }
+
+  async completeTutorial(): Promise<UserProfile> {
+    const user = await firstValueFrom(this.http.post<UserProfile>('/api/auth/me/tutorial-completion', null));
+    const session = this.sessionState();
+    if (session !== null) {
+      this.storeSession({ ...session, user });
+    }
     return user;
   }
 
@@ -132,6 +161,7 @@ export class AuthService {
       (typeof candidate['birthDate'] === 'string' || candidate['birthDate'] === null) &&
       typeof candidate['email'] === 'string' &&
       typeof candidate['present'] === 'boolean' &&
+      typeof candidate['tutorialCompleted'] === 'boolean' &&
       Array.isArray(candidate['roles']) &&
       candidate['roles'].every((role): role is UserRole => this.isUserRole(role))
     );

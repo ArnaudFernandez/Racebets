@@ -6,7 +6,14 @@ import { AuthService } from './auth.service';
 export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const header = auth.authorizationHeader();
-  const shouldAttachToken = header !== null && request.url.startsWith('/api/') && request.url !== '/api/auth/login';
+  const publicAuthPaths = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/providers',
+    '/api/auth/oauth/exchange'
+  ];
+  const shouldAttachToken =
+    header !== null && request.url.startsWith('/api/') && !publicAuthPaths.includes(request.url);
 
   if (!shouldAttachToken) {
     return next(request);

@@ -1,0 +1,113 @@
+<main class="tutorial-shell">
+  <header class="tutorial-topbar">
+    <div class="tutorial-brand">
+      <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
+      <strong>Course d’entraînement</strong>
+      <span>Fictive</span>
+    </div>
+    <button tuiButton type="button" appearance="flat" size="s" [disabled]="completing()" (click)="requestExit()">
+      Quitter le tutoriel
+    </button>
+  </header>
+
+  <section class="demo-board" aria-label="Simulation d’une course de pari">
+    @if (store.step().id === 'waiting') {
+      <section class="waiting-stage" [class.spotlight]="isSpotlight('stage')">
+        <div class="waiting-mark" aria-hidden="true"><img src="/logo_le_bouscat.png" alt="" /></div>
+        <h1>La prochaine course se prépare.</h1>
+        <p>Restez sur cet écran, il se mettra à jour automatiquement.</p>
+      </section>
+    } @else {
+      <section class="race-stage" [class.running]="store.step().id === 'race-running'" [class.finished]="store.step().id === 'won' || store.step().id === 'history'" [class.spotlight]="isSpotlight('stage')">
+        <div>
+          <p class="live-kicker">{{ store.step().id === 'race-running' ? 'Paris clos' : store.step().id === 'won' || store.step().id === 'history' ? 'Course terminée' : 'Paris live' }}</p>
+          <p class="race-name">Prix de la Découverte</p>
+          <h1>
+            @if (store.step().id === 'race-running') { La course est lancée. }
+            @else if (store.step().id === 'won' || store.step().id === 'history') { Résultat officiel. }
+            @else { Les paris sont ouverts. }
+          </h1>
+          <p>
+            @if (store.step().id === 'race-running') { Bonne chance ! }
+            @else if (store.step().id === 'won' || store.step().id === 'history') { Éclair du Médoc remporte la course. }
+            @else { Touchez un cheval pour enregistrer instantanément votre pari. }
+          </p>
+        </div>
+        <div class="stage-stat"><strong>{{ store.selectedEntryId() === null ? 24 : 25 }}</strong><span>paris</span></div>
+      </section>
+
+      @if (store.step().id === 'won' || store.step().id === 'history') {
+        <section class="result-banner" [class.spotlight]="isSpotlight('result')">
+          <span aria-hidden="true">✓</span>
+          <div><h2>Gagné avec Éclair du Médoc</h2><p>Vous êtes <strong>2e</strong> parmi les votants du cheval gagnant.</p></div>
+        </section>
+      }
+
+      @if (store.step().id !== 'history') {
+        <section class="market" [class.spotlight]="isSpotlight('market')">
+          <header>
+            <div><h2>Chevaux partants</h2><p>4 chevaux</p></div>
+            <span [class.open]="store.step().id !== 'race-running' && store.step().id !== 'won'">{{ store.step().id === 'race-running' || store.step().id === 'won' ? 'Votes fermés' : 'Votes ouverts' }}</span>
+          </header>
+          <div class="runner-grid">
+            @for (runner of runners; track runner.entryId) {
+              <button
+                #runnerButton
+                class="runner-card"
+                type="button"
+                [class.selected]="store.selectedEntryId() === runner.entryId"
+                [class.winner]="store.step().id === 'won' && runner.entryId === winnerId"
+                [class.spotlight]="runner.entryId === winnerId && (isSpotlight('runner') || isSpotlight('bet'))"
+                [disabled]="store.step().action !== 'choose-runner' || runner.entryId !== winnerId"
+                (click)="selectRunner(runner)"
+              >
+                <span><small>N° {{ runner.horseNumber }}</small><strong>{{ runner.horseName }}</strong></span>
+                <span class="runner-action">
+                  @if (store.step().id === 'won' && runner.entryId === winnerId) { Gagnant }
+                  @else if (store.selectedEntryId() === runner.entryId) { Sélectionné · 14:32:08 }
+                  @else if (store.step().action === 'choose-runner' && runner.entryId === winnerId) { Parier }
+                </span>
+              </button>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="history-preview spotlight" aria-labelledby="history-title">
+          <header><div><p>Votre espace</p><h2 id="history-title">Historique des paris</h2></div><strong>2</strong></header>
+          <div class="history-list">
+            @for (entry of history; track entry.raceName) {
+              <article [class.won]="entry.outcome === 'WON'">
+                <header><h3>{{ entry.raceName }}</h3><span [class.won]="entry.outcome === 'WON'">{{ entry.outcome === 'WON' ? 'Gagné' : 'Perdu' }}</span></header>
+                <dl>
+                  <div><dt>Votre cheval</dt><dd>{{ entry.selectedHorseName }}</dd></div>
+                  <div><dt>Cheval gagnant</dt><dd>{{ entry.winningHorseName }}</dd></div>
+                  @if (entry.speedRank !== null) { <div><dt>Place parmi les gagnants</dt><dd>#{{ entry.speedRank }}</dd></div> }
+                </dl>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    }
+  </section>
+
+  <div class="tour-backdrop" aria-hidden="true"></div>
+
+  <aside class="coach" role="region" aria-live="polite" aria-labelledby="coach-title" aria-describedby="coach-description">
+    <div class="coach-progress">
+      <span>Étape {{ store.progress() }} sur {{ stepsCount }}</span>
+      <progress tuiProgressBar size="s" [max]="stepsCount" [value]="store.progress()"></progress>
+    </div>
+    <p class="coach-eyebrow">{{ store.step().eyebrow }}</p>
+    <h2 #coachTitle id="coach-title" tabindex="-1">{{ store.step().title }}</h2>
+    <p id="coach-description">{{ store.step().description }}</p>
+    @if (completionError(); as message) {
+      <p class="completion-error" role="alert">{{ message }}</p>
+    }
+    @if (store.step().action !== 'choose-runner') {
+      <button tuiButton type="button" size="m" [loading]="completing()" (click)="continue()">{{ store.step().actionLabel }}</button>
+    } @else {
+      <p class="action-hint" aria-live="polite">Sélectionnez la fiche éclairée pour continuer.</p>
+    }
+  </aside>
+</main>

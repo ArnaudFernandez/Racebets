@@ -1,0 +1,59 @@
+@if (editable()) {
+  <p class="drag-hint" id="race-order-help">
+    Faites glisser chaque cheval. Au clavier, utilisez les flèches haut et bas.
+  </p>
+  <tui-tiles
+    class="order-tiles"
+    [class.disabled]="disabled()"
+    [(order)]="order"
+    (orderChange)="reorder($event)"
+    role="listbox"
+    aria-label="Classement des chevaux"
+    aria-describedby="race-order-help"
+  >
+    @for (entry of entries(); track entry.entryId; let index = $index) {
+      <tui-tile
+        class="order-tile"
+        tabindex="0"
+        role="option"
+        aria-roledescription="Cheval réordonnable"
+        [attr.aria-label]="entry.horseName + ', position ' + displayedPosition(index)"
+        [attr.aria-describedby]="'race-order-help'"
+        [attr.aria-disabled]="disabled()"
+        [attr.aria-posinset]="displayedPosition(index)"
+        [attr.aria-setsize]="entries().length"
+        [style.order]="order().get(index)"
+        (keydown)="reorderWithKeyboard($event, index)"
+      >
+        <div class="order-card" tuiTileHandle [class.winner]="displayedPosition(index) === 1">
+          <span class="grip" aria-hidden="true"><tui-icon icon="@tui.grip-vertical" /></span>
+          <span class="rank" aria-hidden="true">{{ displayedPosition(index) }}</span>
+          <span class="horse">
+            <strong>{{ entry.horseName }}</strong>
+            @let count = voteCount(entry);
+            @if (entry.horseNumber !== undefined || voteCount(entry) !== null) {
+              <small>
+                @if (entry.horseNumber !== undefined) { Dossard {{ entry.horseNumber }} }
+                @if (entry.horseNumber !== undefined && count !== null) { · }
+                @if (count !== null) { {{ count }} vote{{ count > 1 ? 's' : '' }} }
+              </small>
+            }
+          </span>
+        </div>
+      </tui-tile>
+    }
+  </tui-tiles>
+} @else {
+  <ol class="static-order">
+    @for (entry of entries(); track entry.entryId; let index = $index) {
+      <li [class.winner]="index === 0">
+        <span class="rank">{{ index + 1 }}</span>
+        <span class="horse"><strong>{{ entry.horseName }}</strong></span>
+      </li>
+    }
+  </ol>
+}
+
+@if (announcement(); as message) {
+  <p class="position-update" role="status">{{ message }}</p>
+}

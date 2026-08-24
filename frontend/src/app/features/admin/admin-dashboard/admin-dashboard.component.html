@@ -111,27 +111,29 @@
         </header>
 
         <div class="table-wrap">
-          <table>
+          <table tuiTable size="m">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nom</th>
-                <th>Actions</th>
+                <th tuiTh>ID</th>
+                <th tuiTh>Nom</th>
+                <th tuiTh>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody tuiTbody>
               @for (horse of sortedHorses(); track horse.id) {
                 <tr>
-                  <td data-label="ID">{{ horse.id }}</td>
-                  <td data-label="Nom">{{ horse.name }}</td>
-                  <td class="row-actions" data-label="Actions">
-                    <button tuiButton type="button" size="xs" appearance="secondary" (click)="editHorse(horse)">Editer</button>
-                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestHorseDelete(horse)">Supprimer</button>
+                  <td tuiTd data-label="ID">{{ horse.id }}</td>
+                  <td tuiTd data-label="Nom">{{ horse.name }}</td>
+                  <td tuiTd data-label="Actions">
+                    <div class="row-actions">
+                      <button tuiButton type="button" size="xs" appearance="secondary" (click)="editHorse(horse)">Editer</button>
+                      <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestHorseDelete(horse)">Supprimer</button>
+                    </div>
                   </td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="3" class="empty">Aucun cheval.</td>
+                  <td tuiTd colspan="3" class="empty">Aucun cheval.</td>
                 </tr>
               }
             </tbody>
@@ -153,30 +155,37 @@
         </header>
 
         <div class="table-wrap">
-          <table>
+          <table tuiTable size="m">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nom</th>
-                <th>Etat</th>
-                <th>Actions</th>
+                <th tuiTh>ID</th>
+                <th tuiTh>Nom</th>
+                <th tuiTh>Etat</th>
+                <th tuiTh>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody tuiTbody>
               @for (race of sortedRaces(); track race.id) {
                 <tr [class.finished-row]="race.state === 'FINISHED'">
-                  <td data-label="ID">{{ race.id }}</td>
-                  <td data-label="Nom">{{ race.name }}</td>
-                  <td data-label="État"><span tuiBadge size="s" [appearance]="raceStateAppearance(race.state)">{{ raceStateLabel(race.state) }}</span></td>
-                  <td class="row-actions" data-label="Actions">
-                    <button tuiButton type="button" size="xs" (click)="openRace(race)">Piloter</button>
-                    <button tuiButton type="button" size="xs" appearance="secondary" (click)="editRace(race)">Editer</button>
-                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestRaceDelete(race)">Supprimer</button>
+                  <td tuiTd data-label="ID">{{ race.id }}</td>
+                  <td tuiTd data-label="Course">
+                    <div class="race-name-cell">
+                      @if (race.raceImgUrl; as imageUrl) { <img [src]="imageUrl" [alt]="''" /> }
+                      <span>{{ race.name }}</span>
+                    </div>
+                  </td>
+                  <td tuiTd data-label="État"><span tuiBadge size="s" [appearance]="raceStateAppearance(race.state)">{{ raceStateLabel(race.state) }}</span></td>
+                  <td tuiTd data-label="Actions">
+                    <div class="row-actions">
+                      <button tuiButton type="button" size="xs" (click)="openRace(race)">Piloter</button>
+                      <button tuiButton type="button" size="xs" appearance="secondary" (click)="editRace(race)">Editer</button>
+                      <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestRaceDelete(race)">Supprimer</button>
+                    </div>
                   </td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="4" class="empty">Aucune course.</td>
+                  <td tuiTd colspan="4" class="empty">Aucune course.</td>
                 </tr>
               }
             </tbody>
@@ -198,9 +207,11 @@
         <input tuiInput formControlName="name" placeholder="Nom de la course" />
       </tui-textfield>
 
-      <tui-textfield>
-        <input tuiInput formControlName="raceImgUrl" placeholder="URL image optionnelle" />
-      </tui-textfield>
+        <label class="file-field">
+          <span>Visuel de la course (optionnel)</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" (change)="selectRaceImage($event)" />
+          <small>{{ selectedRaceImage()?.name ?? (raceForm.controls.raceImgUrl.value ? 'Visuel actuel conservé' : 'PNG, JPEG ou WebP · 5 Mo maximum') }}</small>
+        </label>
 
       <div class="form-actions dialog-actions">
         <button tuiButton type="submit" size="m" [disabled]="loading()">

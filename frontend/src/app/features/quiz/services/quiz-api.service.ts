@@ -42,6 +42,10 @@ export class QuizApiService {
     return firstValueFrom(this.http.get<readonly QuizSessionSummaryResponse[]>('/api/admin/quizzes/sessions/live'));
   }
 
+  findAdminSession(sessionId: number): Promise<QuizSessionSnapshotResponse> {
+    return firstValueFrom(this.http.get<QuizSessionSnapshotResponse>(`/api/admin/quizzes/sessions/${sessionId}`));
+  }
+
   startSession(sessionId: number): Promise<QuizSessionSnapshotResponse> {
     return this.transition(sessionId, 'start');
   }

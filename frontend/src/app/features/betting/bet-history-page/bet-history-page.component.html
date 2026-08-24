@@ -4,7 +4,7 @@
       <h1>Historique des paris</h1>
       <p>Vos courses terminées et vos résultats.</p>
     </div>
-    <strong>{{ history().length }}</strong>
+    <strong>{{ history()?.length ?? 0 }}</strong>
   </header>
 
   @if (loading()) {
@@ -12,9 +12,10 @@
   } @else {
     @if (error(); as message) {
       <p class="message error" role="alert">{{ message }}</p>
-    } @else {
+    }
+    @if (history(); as entries) {
       <section class="history-list" aria-label="Courses auxquelles vous avez participé">
-      @for (entry of history(); track entry.raceId) {
+      @for (entry of entries; track entry.raceId) {
         <article class="history-card" [class.won]="entry.state === 'WON'">
           <header>
             <div>

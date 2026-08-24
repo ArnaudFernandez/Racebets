@@ -1,82 +1,74 @@
 <tui-root>
-  <div class="app-frame">
-    <header class="app-topbar" [attr.inert]="raceInProgressOnBettingPage() ? '' : null">
-      <a class="brand" routerLink="/" aria-label="Racebets accueil">
-        <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
-        <span>
-          <strong>Racebets</strong>
-        </span>
-      </a>
+  <div class="app-frame" [class.authenticated]="auth.isAuthenticated()">
+    @if (auth.isAuthenticated() && !tutorialActive()) {
+      <header class="app-topbar" [attr.inert]="raceInProgressOnBettingPage() ? '' : null">
+        <a class="brand" routerLink="/" aria-label="Racebets accueil">
+          <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
+          <span>
+            <strong>Racebets</strong>
+          </span>
+        </a>
 
-      <nav class="app-nav desktop-nav" aria-label="Navigation principale">
-        @if (features.bettingEnabled()) {
-          <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-            Paris
-          </a>
-        }
-        @if (features.quizEnabled()) {
-          <a class="nav-link" routerLink="/quiz" routerLinkActive="active">
-            Quiz
-          </a>
-        }
-        @if (betHistory.hasHistory()) {
-          <a class="nav-link" routerLink="/history" routerLinkActive="active">
-            Historique
-          </a>
-        }
-        @if (auth.isAdmin()) {
-          <a class="nav-link" routerLink="/admin" routerLinkActive="active">
-            Administration
-          </a>
-        }
-      </nav>
+        <nav class="app-nav desktop-nav" aria-label="Navigation principale">
+          @if (features.bettingEnabled()) {
+            <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              Paris
+            </a>
+          }
+          @if (features.quizEnabled()) {
+            <a class="nav-link" routerLink="/quiz" routerLinkActive="active">
+              Quiz
+            </a>
+          }
+          @if (betHistory.hasHistory()) {
+            <a class="nav-link" routerLink="/history" routerLinkActive="active">
+              Historique
+            </a>
+          }
+          @if (auth.isAdmin()) {
+            <a class="nav-link" routerLink="/admin" routerLinkActive="active">
+              Administration
+            </a>
+          }
+        </nav>
 
-      <div class="session-box">
-        @if (auth.isAuthenticated()) {
+        <div class="session-box">
           <span class="user-name">{{ auth.user()?.name }}</span>
           <button class="logout-trigger" type="button" (click)="requestLogout()">
             Déconnexion
           </button>
-        } @else {
-          <a class="login-link" routerLink="/login" routerLinkActive="active">
-            Connexion
-          </a>
-        }
-      </div>
-    </header>
+        </div>
+      </header>
+    }
 
     <router-outlet />
 
+    @if (auth.isAuthenticated() && !tutorialActive()) {
+      <nav class="mobile-nav" aria-label="Navigation mobile">
+        @if (features.bettingEnabled()) {
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            <span>Paris</span>
+          </a>
+        }
+        @if (features.quizEnabled()) {
+          <a routerLink="/quiz" routerLinkActive="active">
+            <span>Quiz</span>
+          </a>
+        }
+        @if (betHistory.hasHistory()) {
+          <a routerLink="/history" routerLinkActive="active">
+            <span>Historique</span>
+          </a>
+        }
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin" routerLinkActive="active">
+            <span>Admin</span>
+          </a>
+        }
+      </nav>
+    }
 
-    <nav class="mobile-nav" aria-label="Navigation mobile">
-      @if (features.bettingEnabled()) {
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-          <span>Paris</span>
-        </a>
-      }
-      @if (features.quizEnabled()) {
-        <a routerLink="/quiz" routerLinkActive="active">
-          <span>Quiz</span>
-        </a>
-      }
-      @if (betHistory.hasHistory()) {
-        <a routerLink="/history" routerLinkActive="active">
-          <span>Historique</span>
-        </a>
-      }
-      @if (auth.isAdmin()) {
-        <a routerLink="/admin" routerLinkActive="active">
-          <span>Admin</span>
-        </a>
-      }
-      @if (!auth.isAuthenticated()) {
-        <a routerLink="/login" routerLinkActive="active">
-          <span>Login</span>
-        </a>
-      }
-    </nav>
-
-    @if (logoutDialogOpen()) {
+    @if (auth.isAuthenticated() && logoutDialogOpen()) {
       <div class="logout-backdrop">
         <section class="logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title">
           <h2 id="logout-title">Confirmer la déconnexion</h2>

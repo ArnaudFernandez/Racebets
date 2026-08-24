@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TuiTable } from '@taiga-ui/addon-table';
 import { TuiButton, TuiDialog, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 import { TuiBadge, TuiTabs } from '@taiga-ui/kit';
@@ -31,7 +32,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [AdminPartnerPanelComponent, AdminQuizPanelComponent, AdminRaceHistoryPanelComponent, AdminUserPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiTabs, TuiTitle],
+  imports: [AdminPartnerPanelComponent, AdminQuizPanelComponent, AdminRaceHistoryPanelComponent, AdminUserPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiTable, TuiTabs, TuiTitle],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -64,6 +65,7 @@ export class AdminDashboardComponent {
   readonly deleteTarget = signal<DeleteTarget | null>(null);
   readonly editingHorseId = signal<number | null>(null);
   readonly editingRaceId = signal<number | null>(null);
+  readonly selectedRaceImage = signal<File | null>(null);
   readonly raceDialogOpen = signal(false);
 
   readonly raceStates: readonly RaceState[] = ['CREATED', 'STANDBY', 'BET_STARTING', 'BETTING', 'BET_CLOSED', 'FINISHED'];
@@ -210,13 +212,26 @@ export class AdminDashboardComponent {
 
     await this.runAction('Enregistrement de la course...', async () => {
       const id = this.editingRaceId();
+      let savedRace: RaceAdminResponse;
 
       if (id === null) {
-        await this.adminApi.createRace(request);
+        savedRace = await this.adminApi.createRace(request);
         this.success.set('Course creee.');
       } else {
-        await this.adminApi.updateRace(id, request);
+        savedRace = await this.adminApi.updateRace(id, request);
         this.success.set('Course mise a jour.');
+      }
+
+      const image = this.selectedRaceImage();
+      if (image !== null) {
+        try {
+          await this.adminApi.uploadRaceImage(savedRace.id, image);
+        } catch (error: unknown) {
+          this.success.set(id === null ? 'Course créée, mais son image n’a pas été ajoutée.' : 'Course mise à jour, mais son image n’a pas été ajoutée.');
+          this.error.set(error instanceof HttpErrorResponse && error.status === 404
+            ? 'Le serveur doit être redéployé avec la version qui gère l’upload des images.'
+            : 'L’image n’a pas pu être ajoutée. La course reste enregistrée.');
+        }
       }
 
       this.cancelRaceEdit();
@@ -240,6 +255,18 @@ export class AdminDashboardComponent {
     this.raceDialogOpen.set(true);
   }
 
+  protected selectRaceImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const image = input.files?.item(0) ?? null;
+    if (image !== null && (!['image/png', 'image/jpeg', 'image/webp'].includes(image.type) || image.size > 5 * 1024 * 1024)) {
+      this.selectedRaceImage.set(null);
+      this.error.set('Choisissez une image PNG, JPEG ou WebP de 5 Mo maximum.');
+      input.value = '';
+      return;
+    }
+    this.selectedRaceImage.set(image);
+  }
+
   protected closeRaceDialog(): void {
     this.cancelRaceEdit();
   }
@@ -250,6 +277,7 @@ export class AdminDashboardComponent {
 
   protected cancelRaceEdit(): void {
     this.editingRaceId.set(null);
+    this.selectedRaceImage.set(null);
     this.raceForm.reset({ name: '', raceImgUrl: null, state: 'CREATED' });
     this.raceDialogOpen.set(false);
   }
