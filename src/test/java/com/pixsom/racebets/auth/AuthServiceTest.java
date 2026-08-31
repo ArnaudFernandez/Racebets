@@ -2,6 +2,7 @@ package com.pixsom.racebets.auth;
 
 import com.pixsom.racebets.auth.dto.LoginRequest;
 import com.pixsom.racebets.auth.dto.LoginResponse;
+import com.pixsom.racebets.auth.dto.UserProfileResponse;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.enums.Role;
 import com.pixsom.racebets.repositories.AppUserRepository;
@@ -90,5 +91,19 @@ class AuthServiceTest {
 
         verify(passwordEncoder).matches("WRONG", "encoded-access-code");
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void completeTutorialPersistsTheFlagAndReturnsTheUpdatedProfile() {
+        AppUser user = new AppUser();
+        ReflectionTestUtils.setField(user, "id", 7L);
+        user.setRoles(Set.of(Role.USER));
+        when(appUserRepository.findLockedById(7L)).thenReturn(Optional.of(user));
+
+        UserProfileResponse response = authService.completeTutorial(7L);
+
+        assertThat(user.isTutorialCompleted()).isTrue();
+        assertThat(response.tutorialCompleted()).isTrue();
+        verify(appUserRepository).findLockedById(7L);
     }
 }

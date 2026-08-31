@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { TuiLoader } from '@taiga-ui/core';
+import { EMPTY, catchError, exhaustMap, tap, timer } from 'rxjs';
 
-import { BetHistoryEntry } from '../models/bet-history.model';
 import { BetHistoryService } from '../services/bet-history.service';
 
 @Component({
@@ -13,14 +14,24 @@ import { BetHistoryService } from '../services/bet-history.service';
 })
 export class BetHistoryPageComponent {
   private readonly historyService = inject(BetHistoryService);
+  private readonly refreshError = signal<string | null>(null);
 
-  readonly history = signal<readonly BetHistoryEntry[]>([]);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
-
-  constructor() {
-    void this.load();
-  }
+  readonly history = toSignal(
+    timer(0, 1000).pipe(
+      exhaustMap(() =>
+        this.historyService.findAll().pipe(
+          tap(() => this.refreshError.set(null)),
+          catchError(() => {
+            this.refreshError.set('Impossible d’actualiser votre historique pour le moment.');
+            return EMPTY;
+          })
+        )
+      )
+    ),
+    { initialValue: null }
+  );
+  readonly error = this.refreshError.asReadonly();
+  readonly loading = computed(() => this.history() === null && this.error() === null);
 
   protected formatDate(value: string): string {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -37,13 +48,4 @@ export class BetHistoryPageComponent {
     }).format(new Date(value));
   }
 
-  private async load(): Promise<void> {
-    try {
-      this.history.set(await this.historyService.findAll());
-    } catch {
-      this.error.set('Impossible de charger votre historique pour le moment.');
-    } finally {
-      this.loading.set(false);
-    }
-  }
 }

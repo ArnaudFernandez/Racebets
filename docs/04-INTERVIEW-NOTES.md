@@ -266,3 +266,65 @@ Pourquoi valider le type et la taille du logo cote serveur ?
 Reponse : l'attribut `accept` du champ fichier n'est qu'une aide UX et peut etre contourne. Le service impose donc
 une liste blanche de types raster et une limite de 2 Mo avant toute persistence, ce qui protege le stockage et evite
 les contenus actifs comme les SVG arbitraires.
+
+### Tutoriel Du Premier Pari
+
+Le tutoriel est une simulation frontend isolee du domaine reel. Un store NgRx Signals porte sa machine d'etapes et
+des fixtures statiques representent la course, le pari et l'historique. Aucun endpoint de pari n'est appele par la
+simulation : les invariants et l'horodatage des vraies courses restent donc exclusivement controles par le serveur.
+La completion est un marqueur monotone persiste sur `AppUser` par un endpoint authentifie. L'identite vient du claim
+JWT `userId` et non du corps de requete. Le tutoriel ne reapparait donc pas apres deconnexion, effacement du stockage
+navigateur ou changement d'appareil.
+
+Pourquoi ne pas reutiliser directement `BettingApiService` pour la course d'entrainement ?
+
+Reponse : cela melangerait donnees pedagogiques et domaine persiste, imposerait des exceptions serveur aux invariants
+de course et pourrait polluer l'historique. Une fixture locale rend l'isolation explicite et testable.
+
+Pourquoi persister la completion cote serveur plutot que dans `localStorage` ?
+
+Reponse : le besoin est attache au compte et exige que le tutoriel ne reapparaisse jamais. Un stockage navigateur peut
+etre efface et n'est pas partage entre appareils. Le booléen serveur fournit une source de verite durable ; sa mise a
+jour idempotente rend sans danger les doubles clics et nouvelles tentatives reseau.
+
+## Lot 5 : Mode Exclusif Et Nuage De Mots
+
+### Reponse Senior Synthese
+
+J'ai remplace les indicateurs fonctionnels independants par un enum persiste qui rend l'exclusivite structurelle. Le
+nuage de mots est une vertical slice avec une machine d'etats serveur, un slot live unique protege en SQL et des
+transitions serialisees par verrou pessimiste. Chaque reponse est rattachee a l'identite JWT, unique par question et
+modifiable uniquement pendant l'ouverture. Les participants ne recoivent les agregats qu'apres la revelation et
+aucune identite n'est exposee. Le polling REST reste un transport interchangeable avec un futur flux STOMP.
+
+### Killer Questions Lot 5
+
+Pourquoi remplacer trois booleens par un enum `activeMode` ?
+
+Reponse : l'invariant exige exactement un mode. Avec des booleens, plusieurs combinaisons invalides restent
+representables et doivent etre refusees a chaque ecriture. Un enum rend ces etats impossibles dans le modele Java, le
+contrat HTTP et la base.
+
+Pourquoi une contrainte unique sur un slot nullable ?
+
+Reponse : la verification applicative produit un message clair mais deux transactions peuvent la franchir ensemble.
+La valeur `TRUE` reserve l'unique slot live et `NULL` permet de conserver un nombre illimite de questions closes. La
+base reste ainsi le dernier arbitre en concurrence.
+
+Pourquoi verrouiller la question lors d'une soumission ?
+
+Reponse : la fermeture et une derniere reponse peuvent arriver simultanement. Le verrou impose un ordre total : soit
+la reponse est persistee avant la fermeture, soit elle observe l'etat ferme et est refusee. Une simple verification
+sans verrou laisserait une fenetre de course.
+
+Pourquoi stocker un texte affiche et une cle normalisee ?
+
+Reponse : la cle sans casse ni accents regroupe les occurrences attendues, tandis que le texte affiche conserve une
+forme humaine stable. Calculer uniquement au frontend dupliquerait la regle, exposerait des resultats divergents et
+obligerait a transmettre toutes les reponses brutes.
+
+Pourquoi masquer les agregats avant la revelation cote backend ?
+
+Reponse : cacher les mots uniquement dans Angular ne protege rien ; un participant pourrait lire la reponse HTTP. Le
+snapshot joueur retourne donc structurellement une liste vide avant `REVEALED`, alors que la vue admin peut suivre les
+agregats necessaires au pilotage.

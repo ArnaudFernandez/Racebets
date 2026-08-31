@@ -2,19 +2,23 @@ package com.pixsom.racebets.auth;
 
 import com.pixsom.racebets.auth.dto.LoginRequest;
 import com.pixsom.racebets.auth.dto.LoginResponse;
+import com.pixsom.racebets.auth.dto.UserProfileResponse;
 import com.pixsom.racebets.enums.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -69,5 +73,21 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("bettor@example.com", "WRONG"))))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tutorialCompletionUsesTheAuthenticatedUserId() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .claim("userId", 42L)
+                .build();
+        UserProfileResponse profile = new UserProfileResponse(
+                42L, "Camille", "Martin", null, "camille@example.com", true, true, Set.of(Role.USER));
+        when(authService.completeTutorial(42L)).thenReturn(profile);
+
+        UserProfileResponse response = new AuthController(authService).completeTutorial(jwt);
+
+        verify(authService).completeTutorial(42L);
+        assertThat(response.tutorialCompleted()).isTrue();
     }
 }

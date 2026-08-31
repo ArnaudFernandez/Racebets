@@ -132,6 +132,7 @@ Termine dans ce lot :
 - gestion admin des partenaires avec upload de logo, activation individuelle et affichage sur l'ecran d'attente ;
 - actualisation automatique du lien d'historique personnel sans rechargement ;
 - snapshot REST authentifie et polling temporaire d'une seconde.
+- tutoriel du premier pari : simulation locale sans mutation de course ni quiz, avec completion persistante sur le compte utilisateur.
 
 ### Lot 4 : Docker / CI-CD / Dokploy
 
@@ -146,6 +147,22 @@ Sujets :
 - Variables d'environnement : `JWT_SECRET`, datasource, profils.
 - CI tests.
 - Deploiement Dokploy.
+
+### Lot 5 : Modes Exclusifs Et Nuage De Mots
+
+Statut : valide fonctionnellement.
+
+Livrables :
+
+- mode global exclusif `BETTING | QUIZ | WORD_CLOUD` et migration des anciens indicateurs ;
+- selection admin avec confirmation de l'impact global et synchronisation des terminaux ouverts ;
+- CRUD des questions de nuage de mots et cycle serveur `DRAFT -> OPEN -> REVEALED -> CLOSED` ;
+- unicite SQL et verrouillage transactionnel de la question live ;
+- reponse unique et modifiable par utilisateur, identifie exclusivement depuis le JWT ;
+- aggregation insensible a la casse et aux accents sans exposition des identites ;
+- ecran participant responsive avec saisie live et revelation par occurrences ;
+- tutoriel de pari strictement limite au mode `BETTING` ;
+- tests backend, frontend, build et lint.
 
 ## Prochaine Session Recommandee
 

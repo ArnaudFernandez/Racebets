@@ -2,6 +2,8 @@ package com.pixsom.racebets.betting;
 
 import com.pixsom.racebets.admin.ConflictException;
 import com.pixsom.racebets.admin.NotFoundException;
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.betting.dto.LiveRaceResponse;
 import com.pixsom.racebets.betting.dto.LiveRunnerResponse;
 import com.pixsom.racebets.betting.dto.UserBetResponse;
@@ -32,22 +34,27 @@ public class BettingService {
     private final RaceEntryRepository raceEntryRepository;
     private final BetRepository betRepository;
     private final AppUserRepository appUserRepository;
+    private final AppFeatureSettingsService featureSettingsService;
 
     public BettingService(RaceRepository raceRepository, RaceEntryRepository raceEntryRepository,
-                          BetRepository betRepository, AppUserRepository appUserRepository) {
+                           BetRepository betRepository, AppUserRepository appUserRepository,
+                           AppFeatureSettingsService featureSettingsService) {
         this.raceRepository = raceRepository;
         this.raceEntryRepository = raceEntryRepository;
         this.betRepository = betRepository;
         this.appUserRepository = appUserRepository;
+        this.featureSettingsService = featureSettingsService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<LiveRaceResponse> currentRace(Long userId) {
+        featureSettingsService.requireActiveMode(AppMode.BETTING);
         return visibleRace().map(race -> snapshot(race, userId));
     }
 
     @Transactional
     public LiveRaceResponse placeBet(Long raceId, Long raceEntryId, Long userId) {
+        featureSettingsService.requireActiveMode(AppMode.BETTING);
         AppUser user = appUserRepository.findLockedById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         Race race = raceRepository.findLockedById(raceId)

@@ -11,17 +11,41 @@
       <div class="hero-total"><strong>{{ race.totalVotes }}</strong><span>vote{{ race.totalVotes > 1 ? 's' : '' }}</span></div>
     </header>
 
+    @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
+    @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+    @if (saving()) { <p class="saving-status" role="status">Correction en cours…</p> }
+
     <section class="result-strip" aria-labelledby="result-title">
-      <div class="section-title"><h2 id="result-title">Ordre d’arrivée</h2></div>
-      <ol>
-        @for (entry of race.result; track entry.rank) {
-          <li [class.winner]="entry.rank === 1">
-            <span class="official-rank">{{ entry.rank }}</span>
-            <span class="horse-name">{{ entry.horseName }}</span>
-            <span class="vote-count">{{ entry.voteCount }} vote{{ entry.voteCount > 1 ? 's' : '' }}</span>
-          </li>
+      <div class="section-title result-title-row">
+        <div><h2 id="result-title">Ordre d’arrivée</h2></div>
+        @if (!editingResult()) {
+          <button tuiButton type="button" size="m" appearance="secondary" (click)="editResult()">Modifier le classement</button>
         }
-      </ol>
+      </div>
+      @if (editingResult()) {
+        <p class="correction-copy">Réordonnez tous les chevaux. Le premier sera le nouveau gagnant.</p>
+        <app-race-order-list
+          [entries]="orderedResult()"
+          [editable]="true"
+          [disabled]="saving()"
+          (reordered)="reorderEntries($event)"
+        />
+        <div class="correction-actions">
+          <button tuiButton type="button" appearance="secondary" [disabled]="saving()" (click)="cancelResultEdition()">Annuler</button>
+          <button tuiButton type="button" [disabled]="!resultChanged() || saving()" (click)="requestResultCorrection()">{{ saving() ? 'Enregistrement…' : 'Enregistrer la correction' }}</button>
+        </div>
+        <p class="correction-warning">Les gagnants et les statuts de tous les votes seront recalculés.</p>
+      } @else {
+        <ol>
+          @for (entry of race.result; track entry.entryId) {
+            <li [class.winner]="entry.rank === 1">
+              <span class="official-rank">{{ entry.rank }}</span>
+              <span class="horse-name">{{ entry.horseName }}</span>
+              <span class="vote-count">{{ entry.voteCount }} vote{{ entry.voteCount > 1 ? 's' : '' }}</span>
+            </li>
+          }
+        </ol>
+      }
     </section>
 
     <section class="leaderboard" aria-labelledby="winners-title">
@@ -68,4 +92,23 @@
   } @else {
     <section class="loading-page"><p class="message error" role="alert">{{ error() }}</p><a tuiButton routerLink="/admin">Retour à l’administration</a></section>
   }
+
+  <ng-template
+    [tuiDialog]="correctionDialogOpen()"
+    (tuiDialogChange)="correctionDialogOpen.set($event)"
+    [tuiDialogOptions]="{label: 'Corriger le résultat ?', size: 's'}"
+  >
+    <section class="correction-dialog">
+      @if (winnerChanged()) {
+        <p>Le gagnant passera de <strong>{{ originalWinnerName() }}</strong> à <strong>{{ correctedWinnerName() }}</strong>.</p>
+      } @else {
+        <p>Le gagnant reste <strong>{{ originalWinnerName() }}</strong>, mais l’ordre des places suivantes sera modifié.</p>
+      }
+      <p id="correction-impact">Cette correction modifiera l’historique et recalculera le résultat de chaque participant.</p>
+      <div class="dialog-actions">
+        <button tuiButton type="button" appearance="secondary-destructive" [disabled]="saving()" (click)="confirmResultCorrection()">Confirmer la correction</button>
+        <button tuiButton type="button" appearance="secondary" [disabled]="saving()" (click)="cancelResultCorrection()">Revenir au classement</button>
+      </div>
+    </section>
+  </ng-template>
 </main>

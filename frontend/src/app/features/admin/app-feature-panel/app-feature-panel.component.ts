@@ -1,10 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { TuiButton, TuiTitle } from '@taiga-ui/core';
+import { TuiButton, TuiDialog, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
-import { TuiSwitch } from '@taiga-ui/kit';
 
+import { AppMode } from '../../../core/features/app-features.model';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
 
 interface BackendErrorResponse {
@@ -13,7 +12,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-feature-panel',
-  imports: [ReactiveFormsModule, TuiButton, TuiCard, TuiHeader, TuiSwitch, TuiTitle],
+  imports: [TuiButton, TuiCard, TuiDialog, TuiHeader, TuiTitle],
   templateUrl: './app-feature-panel.component.html',
   styleUrl: './app-feature-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -24,11 +23,13 @@ export class AppFeaturePanelComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-
-  readonly form = new FormGroup({
-    bettingEnabled: new FormControl(true, { nonNullable: true }),
-    quizEnabled: new FormControl(true, { nonNullable: true })
-  });
+  readonly activeMode = signal<AppMode>('BETTING');
+  readonly pendingMode = signal<AppMode | null>(null);
+  readonly modeOptions: readonly { readonly mode: AppMode; readonly title: string; readonly description: string; readonly marker: string }[] = [
+    { mode: 'BETTING', title: 'Paris fictifs', description: 'Courses, prises de paris et résultats en direct.', marker: '01' },
+    { mode: 'QUIZ', title: 'Quiz live', description: 'Questions chronométrées et classement collectif.', marker: '02' },
+    { mode: 'WORD_CLOUD', title: 'Nuage de mots', description: 'Réponses libres puis révélation des idées du public.', marker: '03' }
+  ];
 
   constructor() {
     void this.load();
@@ -37,21 +38,34 @@ export class AppFeaturePanelComponent {
   protected async load(): Promise<void> {
     await this.run(async () => {
       const settings = await this.features.ensureLoaded();
-      this.form.setValue(settings);
+      this.activeMode.set(settings.activeMode);
     }, false);
   }
 
-  protected async submit(): Promise<void> {
-    const settings = this.form.getRawValue();
-    if (!settings.bettingEnabled && !settings.quizEnabled) {
-      this.error.set('Gardez au moins une partie active.');
-      return;
-    }
+  protected requestMode(mode: AppMode): void {
+    if (mode === this.activeMode() || this.loading()) return;
+    this.pendingMode.set(mode);
+    this.error.set(null);
+    this.success.set(null);
+  }
 
+  protected cancelModeChange(): void {
+    this.pendingMode.set(null);
+  }
+
+  protected async confirmModeChange(): Promise<void> {
+    const mode = this.pendingMode();
+    if (mode === null) return;
+    this.pendingMode.set(null);
     await this.run(async () => {
-      this.form.setValue(await this.features.update(settings));
-      this.success.set('Affichage de l application mis a jour.');
+      const settings = await this.features.update({ activeMode: mode });
+      this.activeMode.set(settings.activeMode);
+      this.success.set('Le nouvel affichage est actif pour tous les participants.');
     });
+  }
+
+  protected modeTitle(mode: AppMode): string {
+    return this.modeOptions.find((option) => option.mode === mode)?.title ?? mode;
   }
 
   private async run(action: () => Promise<void>, clearSuccess = true): Promise<void> {

@@ -6,7 +6,9 @@ import { TuiButton, TuiInput, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { AppBrandingService } from '../../../core/branding/app-branding.service';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
+import { TutorialService } from '../../../core/tutorial/tutorial.service';
 
 @Component({
   selector: 'app-login-page',
@@ -16,14 +18,20 @@ import { AppFeaturesService } from '../../../core/features/app-features.service'
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginPageComponent {
+  private static readonly GOOGLE_RETURN_URL_KEY = 'racebets.google.returnUrl';
+
   private readonly auth = inject(AuthService);
+  protected readonly branding = inject(AppBrandingService);
   private readonly features = inject(AppFeaturesService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly tutorial = inject(TutorialService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly mode = signal<'login' | 'register'>('login');
+  readonly googleAvailable = signal(false);
+  readonly googleLinkCode = signal<string | null>(null);
 
   readonly form = new FormGroup({
     email: new FormControl('', {
@@ -56,6 +64,17 @@ export class LoginPageComponent {
     })
   });
 
+  readonly googleLinkForm = new FormGroup({
+    accessCode: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(128)]
+    })
+  });
+
+  constructor() {
+    void this.initializeGoogleAuthentication();
+  }
+
   protected setMode(mode: 'login' | 'register'): void {
     this.mode.set(mode);
     this.error.set(null);
@@ -76,7 +95,7 @@ export class LoginPageComponent {
         accessCode: this.form.controls.accessCode.value
       });
 
-      await this.router.navigateByUrl(this.safeReturnUrl());
+      await this.navigateAfterAuthentication();
     } catch (error: unknown) {
       this.error.set(this.toErrorMessage(error));
     } finally {
@@ -102,7 +121,41 @@ export class LoginPageComponent {
         accessCode: this.registerForm.controls.accessCode.value
       });
 
-      await this.router.navigateByUrl(this.safeReturnUrl());
+      await this.navigateAfterAuthentication();
+    } catch (error: unknown) {
+      this.error.set(this.toErrorMessage(error));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  protected startGoogleAuthentication(): void {
+    if (!this.googleAvailable()) {
+      this.error.set('La connexion Google n’est pas encore configurée.');
+      return;
+    }
+
+    const returnUrl = this.safeReturnUrl();
+    this.sessionStorage()?.setItem(LoginPageComponent.GOOGLE_RETURN_URL_KEY, returnUrl);
+    globalThis.location.assign('/api/auth/google/authorize/google');
+  }
+
+  protected async confirmGoogleLink(): Promise<void> {
+    const code = this.googleLinkCode();
+    if (code === null || this.googleLinkForm.invalid) {
+      this.googleLinkForm.markAllAsTouched();
+      return;
+    }
+
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      await this.auth.exchangeOAuthCode({
+        code,
+        accessCode: this.googleLinkForm.controls.accessCode.value
+      });
+      this.googleLinkCode.set(null);
+      await this.navigateAfterAuthentication();
     } catch (error: unknown) {
       this.error.set(this.toErrorMessage(error));
     } finally {
@@ -111,7 +164,10 @@ export class LoginPageComponent {
   }
 
   private safeReturnUrl(): string {
-    const value = this.route.snapshot.queryParamMap.get('returnUrl');
+    const value =
+      this.route.snapshot.queryParamMap.get('returnUrl') ??
+      this.sessionStorage()?.getItem(LoginPageComponent.GOOGLE_RETURN_URL_KEY) ??
+      null;
 
     if (value === null || !value.startsWith('/')) {
       return this.features.defaultPath();
@@ -124,6 +180,72 @@ export class LoginPageComponent {
     return value;
   }
 
+  private async navigateAfterAuthentication(): Promise<void> {
+    const returnUrl = this.safeReturnUrl();
+    this.sessionStorage()?.removeItem(LoginPageComponent.GOOGLE_RETURN_URL_KEY);
+    try {
+      await this.features.ensureLoaded();
+    } catch {
+      this.error.set('Connexion réussie. Chargement de l’événement en cours…');
+      return;
+    }
+    if (this.tutorial.shouldStart()) {
+      await this.router.navigateByUrl('/tutorial');
+      return;
+    }
+
+    await this.router.navigateByUrl(returnUrl);
+  }
+
+  private async initializeGoogleAuthentication(): Promise<void> {
+    const callbackParameters = new URLSearchParams(globalThis.location.hash.replace(/^#/, ''));
+    const googleStatus = callbackParameters.get('google');
+    const code = callbackParameters.get('code');
+
+    if (googleStatus !== null) {
+      globalThis.history.replaceState({}, '', '/login');
+    }
+
+    if (googleStatus === 'error') {
+      this.error.set('Connexion Google annulee ou impossible.');
+    } else if (googleStatus === 'success' && code !== null) {
+      await this.exchangeGoogleCode(code);
+    }
+
+    try {
+      this.googleAvailable.set((await this.auth.providers()).google);
+    } catch {
+      this.googleAvailable.set(false);
+    }
+  }
+
+  private async exchangeGoogleCode(code: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      await this.auth.exchangeOAuthCode({ code });
+      await this.navigateAfterAuthentication();
+    } catch (error: unknown) {
+      if (this.isAccountLinkRequired(error)) {
+        this.googleLinkCode.set(code);
+      } else {
+        this.error.set(this.toErrorMessage(error));
+      }
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  private isAccountLinkRequired(error: unknown): boolean {
+    return (
+      error instanceof HttpErrorResponse &&
+      error.status === 409 &&
+      typeof error.error === 'object' &&
+      error.error !== null &&
+      (error.error as Record<string, unknown>)['code'] === 'ACCOUNT_LINK_REQUIRED'
+    );
+  }
+
   private toErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse && error.status === 401) {
       return 'Identifiants invalides.';
@@ -134,5 +256,9 @@ export class LoginPageComponent {
     }
 
     return 'Connexion impossible pour le moment.';
+  }
+
+  private sessionStorage(): Storage | null {
+    return typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
   }
 }

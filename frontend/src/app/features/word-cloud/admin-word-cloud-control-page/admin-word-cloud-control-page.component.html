@@ -1,0 +1,126 @@
+<main class="control-shell">
+  <a class="back-link" routerLink="/admin" [queryParams]="{section: 'word-cloud'}">← Retour aux questions</a>
+
+  @if (question(); as currentQuestion) {
+    <header class="control-hero race-context-hero">
+      <div class="race-context-copy">
+        <span class="control-meta race-context-meta">Question #{{ currentQuestion.id }}</span>
+        <h1>{{ currentQuestion.text }}</h1>
+        <div class="state-line race-context-state">
+          <span class="state-dot" [class.live]="currentQuestion.status === 'OPEN'"></span>
+          <strong>{{ statusLabel(currentQuestion.status) }}</strong>
+          <span>· {{ currentQuestion.submissionCount }} réponse{{ currentQuestion.submissionCount > 1 ? 's' : '' }}</span>
+          <span>· {{ visibleResponseCount() }} mot{{ visibleResponseCount() > 1 ? 's' : '' }} visible{{ visibleResponseCount() > 1 ? 's' : '' }}</span>
+        </div>
+      </div>
+      <span tuiBadge size="l" [appearance]="statusAppearance(currentQuestion.status)">{{ statusLabel(currentQuestion.status) }}</span>
+    </header>
+
+    <ol class="workflow" aria-label="Déroulé de la question">
+      @for (step of statuses; track step; let index = $index) {
+        <li [class.current]="step === currentQuestion.status" [class.done]="index < statusIndex()">
+          <span>{{ index + 1 }}</span>
+          <small>{{ statusLabel(step) }}</small>
+        </li>
+      }
+    </ol>
+
+    @if (currentQuestion.status === 'DRAFT') {
+      <section class="workflow-advance" aria-label="Passage à l’étape suivante">
+        <div><span class="next-label">Étape suivante</span><strong>Ouvrir les réponses</strong><small>La question apparaîtra sur l’écran de tous les participants.</small></div>
+        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="request('open')">Ouvrir les réponses <span aria-hidden="true">→</span></button>
+      </section>
+    } @else if (currentQuestion.status === 'OPEN') {
+      <section class="workflow-advance" aria-label="Passage à l’étape suivante">
+        <div><span class="next-label">Étape suivante</span><strong>Révéler le nuage</strong><small>Les réponses non censurées seront visibles par tous.</small></div>
+        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="request('reveal')">Révéler le nuage <span aria-hidden="true">→</span></button>
+      </section>
+    } @else if (currentQuestion.status === 'REVEALED') {
+      <section class="workflow-advance" aria-label="Passage à l’étape suivante">
+        <div><span class="next-label">Étape suivante</span><strong>Terminer la question</strong><small>Le nuage quittera l’écran live des participants.</small></div>
+        <button tuiButton type="button" size="l" appearance="secondary-destructive" [disabled]="loading()" (click)="request('close')">Terminer la question</button>
+      </section>
+    } @else {
+      <section class="workflow-advance reset-advance" aria-label="Réinitialisation de la question">
+        <div><span class="next-label">Nouveau passage</span><strong>Réinitialiser cette question</strong><small>Elle redeviendra un brouillon vierge et pourra être ouverte à nouveau.</small></div>
+        <button tuiButton type="button" size="l" appearance="secondary-destructive" [disabled]="loading()" (click)="request('reset')">Réinitialiser cette question</button>
+      </section>
+    }
+
+    @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+    @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
+    @if (loading()) { <p class="loading"><tui-loader size="s" /> Mise à jour de la question…</p> }
+
+    @if (currentQuestion.status !== 'DRAFT') {
+      <div class="control-grid">
+        <section class="panel responses-panel">
+          <header class="panel-head">
+            <div><h2>Réponses reçues</h2><p>Classées automatiquement de la plus fréquente à la moins fréquente.</p></div>
+            <span class="refresh-note">Actualisé automatiquement</span>
+          </header>
+
+          <div class="table-wrap">
+            <table tuiTable size="m">
+              <thead><tr><th tuiTh>Réponse</th><th tuiTh>Occurrences</th><th tuiTh>État</th><th tuiTh>Action</th></tr></thead>
+              <tbody tuiTbody>
+                @for (response of currentQuestion.responses; track response.text) {
+                  <tr [class.censored-row]="response.censored">
+                    <td tuiTd data-label="Réponse"><strong>{{ response.text }}</strong></td>
+                    <td tuiTd data-label="Occurrences"><span class="occurrence-count">{{ response.count }}</span></td>
+                    <td tuiTd data-label="État"><span tuiBadge size="s" [appearance]="response.censored ? 'negative' : 'positive'">{{ response.censored ? 'Censurée' : 'Visible' }}</span></td>
+                    <td tuiTd data-label="Action">
+                      <div class="row-actions">
+                        <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="loading() || response.censored || currentQuestion.status === 'CLOSED'" (click)="request('censor', response)">{{ response.censored ? 'Censurée' : 'Censurer' }}</button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td tuiTd colspan="4"><div class="empty-state"><strong>Aucune réponse pour le moment</strong><p>Cette liste se remplira automatiquement dès la première participation.</p></div></td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel cloud-preview">
+          <header class="panel-head"><div><h2>Aperçu du nuage</h2><p>Seules les réponses visibles sont représentées.</p></div></header>
+          <div class="word-cloud" role="img" aria-label="Aperçu du nuage de mots">
+            @for (word of cloudWords(); track word.text) {
+              <span [style.color]="word.color" [style.font-size]="word.fontSize" [style.transform]="word.rotation" [attr.aria-label]="word.text + ', ' + word.count + ' occurrence' + (word.count > 1 ? 's' : '')">{{ word.text }}</span>
+            } @empty {
+              <div class="empty-state"><strong>Nuage vide</strong><p>Les réponses visibles apparaîtront ici.</p></div>
+            }
+          </div>
+        </section>
+      </div>
+    } @else {
+      <section class="panel draft-panel"><h2>Question prête</h2><p>Aucune réponse n’est encore associée à ce brouillon. Ouvrez les réponses lorsque les participants sont prêts.</p></section>
+    }
+  } @else {
+    <section class="loading-page">
+      @if (error(); as message) {
+        <p class="message error" role="alert">{{ message }}</p>
+        <a tuiButton routerLink="/admin" [queryParams]="{section: 'word-cloud'}" appearance="secondary">Retour à l’administration</a>
+      } @else {
+        <tui-loader size="xl" /><p>Ouverture de la console de question…</p>
+      }
+    </section>
+  }
+
+  <ng-template
+    [tuiDialog]="pendingAction() !== null"
+    (tuiDialogChange)="dialogChanged($event)"
+    [tuiDialogOptions]="{label: dialogTitle(pendingAction()?.action ?? 'open'), size: 's'}"
+  >
+    @if (pendingAction(); as pending) {
+      <section class="confirmation-dialog">
+        @if (pending.response) { <p class="response-to-censor">« {{ pending.response.text }} » · {{ pending.response.count }} occurrence{{ pending.response.count > 1 ? 's' : '' }}</p> }
+        <p>{{ dialogCopy(pending.action) }}</p>
+        <div class="dialog-actions">
+          <button tuiButton type="button" [appearance]="pending.action === 'open' || pending.action === 'reveal' ? 'primary' : 'secondary-destructive'" [disabled]="loading()" (click)="confirmAction()">{{ dialogButton(pending.action) }}</button>
+          <button tuiButton type="button" appearance="secondary" [disabled]="loading()" (click)="cancelAction()">Annuler</button>
+        </div>
+      </section>
+    }
+  </ng-template>
+</main>

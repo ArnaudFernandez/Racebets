@@ -64,13 +64,16 @@ La staging a deja ete creee par Hibernate. Son premier deploiement avec Flyway d
 
 1. Creer et verifier une sauvegarde PostgreSQL hors du VPS.
 2. Conserver `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`.
-3. Definir temporairement `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true`.
+3. Definir temporairement `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` et
+   `SPRING_FLYWAY_BASELINE_VERSION=4`.
 4. Deployer les deux images `staging-<meme-sha>` et verifier dans les logs backend la creation de
    `flyway_schema_history`, puis le demarrage complet de l'application.
 5. Tester connexion, administration, pari, historique, quiz et partenaires.
-6. Remettre `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false`, puis redeployer une derniere fois.
+6. Remettre `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` et `SPRING_FLYWAY_BASELINE_VERSION=1`, puis redeployer une
+   derniere fois.
 
-Le baseline enregistre la base existante en version 1 sans rejouer `V1__initial_schema.sql`. Si Hibernate refuse le
+Le baseline enregistre la base existante en version 4 sans rejouer les migrations historiques. La migration V5
+reconcilie ensuite le schema de maniere additive et ne modifie aucune valeur metier existante. Si Hibernate refuse le
 demarrage en mode `validate`, ne jamais revenir a `update` : restaurer si necessaire et comparer le schema staging a
 la migration.
 

@@ -1,0 +1,87 @@
+<section class="word-cloud-admin">
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+  @if (success(); as message) { <p class="message success" role="status">{{ message }}</p> }
+
+  <article class="questions-panel" tuiCardLarge="compact">
+    <header class="list-head" tuiHeader="body-m">
+      <hgroup tuiTitle>
+        <h2>Questions</h2>
+        <p tuiSubtitle>{{ questions().length }} question{{ questions().length > 1 ? 's' : '' }} préparée{{ questions().length > 1 ? 's' : '' }}</p>
+      </hgroup>
+      <button tuiButton type="button" size="m" (click)="create()">Nouvelle question</button>
+    </header>
+
+    @if (initialLoading()) {
+      <div class="loading-state"><tui-loader size="m" /><span>Chargement des questions…</span></div>
+    } @else {
+      <div class="table-wrap">
+        <table tuiTable size="m">
+          <thead>
+            <tr><th tuiTh>Question</th><th tuiTh>État</th><th tuiTh>Réponses</th><th tuiTh>Actions</th></tr>
+          </thead>
+          <tbody tuiTbody>
+            @for (question of questions(); track question.id) {
+              <tr [class.finished-row]="question.status === 'CLOSED'">
+                <td tuiTd data-label="Question"><div class="question-copy"><strong>{{ question.text }}</strong><small>Question #{{ question.id }}</small></div></td>
+                <td tuiTd data-label="État"><span tuiBadge size="s" [appearance]="statusAppearance(question.status)">{{ statusLabel(question.status) }}</span></td>
+                <td tuiTd data-label="Réponses"><strong class="response-count">{{ question.submissionCount }}</strong></td>
+                <td tuiTd data-label="Actions">
+                  <div class="row-actions">
+                    @if (question.status === 'CLOSED') {
+                      <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="busy()" (click)="control(question)">Consulter</button>
+                      <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="busy()" (click)="request('reset', question)">Réinitialiser cette question</button>
+                    } @else {
+                      <button tuiButton type="button" size="xs" [disabled]="busy()" (click)="control(question)">Piloter</button>
+                      @if (question.status === 'DRAFT') {
+                        <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="busy()" (click)="edit(question)">Modifier</button>
+                        <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="busy()" (click)="request('delete', question)">Supprimer</button>
+                      }
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td tuiTd colspan="4"><div class="empty-state"><strong>Préparez la première question</strong><p>Elle restera en brouillon jusqu’à son ouverture explicite.</p></div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+
+  <ng-template
+    [tuiDialog]="editorDialogOpen()"
+    (tuiDialogChange)="editorDialogChanged($event)"
+    [tuiDialogOptions]="{label: editingId() === null ? 'Nouvelle question' : 'Modifier la question', size: 'm'}"
+  >
+    <form class="editor-form" [formGroup]="questionForm" (ngSubmit)="save()">
+      <p>La question est créée en brouillon. Son déroulé se pilote ensuite depuis son écran dédié.</p>
+      <label for="word-cloud-question">Question proposée aux participants</label>
+      <tui-textfield>
+        <input id="word-cloud-question" tuiInput formControlName="text" maxlength="300" placeholder="Ex. En un mot, que vous inspire cette course ?" />
+      </tui-textfield>
+      <small>{{ questionForm.controls.text.value.length }}/300</small>
+      <div class="dialog-actions">
+        <button tuiButton type="submit" size="m" [disabled]="questionForm.invalid || busy()">{{ editingId() === null ? 'Créer la question' : 'Enregistrer' }}</button>
+        <button tuiButton type="button" size="m" appearance="secondary" [disabled]="busy()" (click)="closeEditor()">Annuler</button>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template
+    [tuiDialog]="confirmation() !== null"
+    (tuiDialogChange)="confirmationDialogChanged($event)"
+    [tuiDialogOptions]="{label: confirmation()?.action === 'reset' ? 'Réinitialiser cette question ?' : 'Supprimer ce brouillon ?', size: 's'}"
+  >
+    @if (confirmation(); as pending) {
+      <section class="confirmation-dialog">
+        <p><strong>{{ pending.question.text }}</strong></p>
+        <p>{{ pending.action === 'reset' ? 'La question reviendra à l’état brouillon. Toutes les réponses et les censures seront définitivement supprimées.' : 'Cette question sera définitivement supprimée.' }}</p>
+        <div class="dialog-actions">
+          <button tuiButton type="button" appearance="secondary-destructive" [disabled]="busy()" (click)="confirm()">{{ pending.action === 'reset' ? 'Réinitialiser et supprimer les réponses' : 'Supprimer définitivement' }}</button>
+          <button tuiButton type="button" appearance="secondary" [disabled]="busy()" (click)="cancelConfirmation()">Annuler</button>
+        </div>
+      </section>
+    }
+  </ng-template>
+</section>

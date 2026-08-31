@@ -1,0 +1,25 @@
+:host { display: block; }
+.word-cloud-admin { display: grid; gap: 1rem; }
+.questions-panel { border: 1px solid var(--rb-line); border-radius: var(--rb-radius-lg); background: var(--rb-paper-strong); box-shadow: var(--rb-shadow-soft); }
+.list-head, .row-actions, .dialog-actions { display: flex; gap: .65rem; align-items: center; }
+.list-head { justify-content: space-between; }
+.row-actions { min-block-size: 2.25rem; flex-wrap: wrap; justify-content: flex-end; }
+.question-copy { display: grid; gap: .15rem; min-inline-size: 0; }
+.question-copy strong { overflow-wrap: anywhere; }
+.question-copy small { color: var(--rb-muted); font-size: .78rem; }
+.response-count { display: inline-grid; min-inline-size: 2rem; block-size: 2rem; place-items: center; border-radius: .6rem; background: var(--rb-panel); font-variant-numeric: tabular-nums; }
+.finished-row { color: var(--rb-muted); }
+.loading-state { display: flex; gap: .7rem; align-items: center; justify-content: center; min-block-size: 11rem; color: var(--rb-muted); }
+.editor-form { display: grid; gap: .75rem; }
+.editor-form p, .confirmation-dialog p { margin: 0; color: var(--rb-muted); line-height: 1.5; }
+.editor-form label { color: var(--rb-muted); font-size: .82rem; font-weight: 700; }
+.editor-form small { justify-self: end; color: var(--rb-subtle); font-variant-numeric: tabular-nums; }
+.confirmation-dialog { display: grid; gap: 1rem; }
+.confirmation-dialog strong { color: var(--rb-ink); }
+.dialog-actions { flex-wrap: wrap; }
+@media (max-width: 46rem) {
+  .list-head { align-items: stretch; flex-direction: column; }
+  .list-head [tuiButton] { inline-size: 100%; }
+  .row-actions, .dialog-actions { display: grid; inline-size: 100%; }
+  .row-actions [tuiButton], .dialog-actions [tuiButton] { inline-size: 100%; }
+}

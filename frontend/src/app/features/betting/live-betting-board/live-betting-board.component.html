@@ -1,19 +1,21 @@
 <main class="live-shell" [attr.inert]="race()?.state === 'BET_CLOSED' ? '' : null">
   @if (race(); as currentRace) {
-    <section class="race-stage" [class]="'state-' + currentRace.state.toLowerCase()">
-      <div class="stage-copy">
-        <div class="live-kicker">
+    <header class="race-stage race-context-hero" [class]="'state-' + currentRace.state.toLowerCase()" [class.has-race-image]="currentRace.raceImgUrl">
+      @if (currentRace.raceImgUrl; as imageUrl) {
+        <img class="race-stage-image race-context-image" [src]="imageUrl" [alt]="''" />
+      }
+      <div class="stage-copy race-context-copy">
+        <h1>{{ currentRace.raceName }}</h1>
+        <div class="state-line race-context-state">
           <span class="pulse" [class.active]="currentRace.state === 'BETTING'"></span>
-          {{ currentRace.state === 'FINISHED' ? 'Course terminée' : 'Paris live' }}
+          <strong>{{ stateTitle(currentRace) }}</strong>
         </div>
-        <p class="race-name">{{ currentRace.raceName }}</p>
-        <h1>{{ stateTitle(currentRace) }}</h1>
-        <p class="stage-message">{{ stateMessage(currentRace) }}</p>
       </div>
-      <div class="stage-stat" aria-label="Nombre de paris">
-        <strong>{{ currentRace.totalBets }}</strong>
-        <span>pari{{ currentRace.totalBets > 1 ? 's' : '' }}</span>
-      </div>
+    </header>
+
+    <section class="race-guidance" aria-live="polite">
+      <span>{{ currentRace.state === 'FINISHED' ? 'Résultat' : 'Information' }}</span>
+      <strong>{{ stateMessage(currentRace) }}</strong>
     </section>
 
     @if (currentRace.state === 'FINISHED' && currentRace.userBet; as bet) {
@@ -49,7 +51,7 @@
       </header>
 
       <div class="runner-grid">
-        @for (runner of currentRace.runners; track runner.entryId) {
+        @for (runner of displayedRunners(); track runner.entryId) {
           <button
             class="runner-card"
             type="button"
@@ -58,12 +60,17 @@
             [disabled]="!bettingOpen() || pendingEntryId() !== null"
             (click)="selectRunner(runner)"
           >
+            <span class="runner-number" aria-hidden="true">
+              {{ currentRace.state === 'FINISHED' ? runner.rank : runner.horseNumber }}
+            </span>
             <span class="runner-main">
               <strong>{{ runner.horseName }}</strong>
               @if (currentRace.state === 'FINISHED') {
                 <small>{{ runner.rank }}{{ runner.rank === 1 ? 'er' : 'e' }} à l’arrivée</small>
               } @else if (currentRace.userBet?.entryId === runner.entryId) {
                 <small>Votre sélection · {{ formatTime(currentRace.userBet!.placedAt) }}</small>
+              } @else {
+                <small>Dossard {{ runner.horseNumber }}</small>
               }
             </span>
             <span class="runner-cta">
@@ -96,19 +103,28 @@
   }
 </main>
 
-@if (race()?.state === 'BET_CLOSED') {
-  <app-race-in-progress-overlay />
+@if (race(); as currentRace) {
+  @if (currentRace.state === 'BET_CLOSED') {
+    <app-race-in-progress-overlay
+      [raceName]="currentRace.raceName"
+      [raceImgUrl]="currentRace.raceImgUrl"
+    />
+  }
 }
 
-@if (changeCandidate(); as candidate) {
-  <div class="modal-backdrop">
-    <section class="change-modal" role="alertdialog" aria-modal="true" aria-labelledby="change-title">
-      <h2 id="change-title">Choisir {{ candidate.horseName }} ?</h2>
+<ng-template
+  [tuiDialog]="changeCandidate() !== null"
+  (tuiDialogChange)="changeDialogOpenChange($event)"
+  [tuiDialogOptions]="{label: 'Modifier votre pari ?', size: 's'}"
+>
+  @if (changeCandidate(); as candidate) {
+    <section class="change-dialog">
+      <p>Choisir <strong>{{ candidate.horseName }}</strong> à la place de votre sélection actuelle ?</p>
       <p>Votre premier horodatage sera définitivement perdu. Votre position de rapidité repartira à l’heure de ce nouveau vote.</p>
       <div class="modal-actions">
         <button tuiButton type="button" (click)="confirmChange()">Confirmer le changement</button>
         <button tuiButton type="button" appearance="secondary" (click)="cancelChange()">Garder mon choix</button>
       </div>
     </section>
-  </div>
-}
+  }
+</ng-template>

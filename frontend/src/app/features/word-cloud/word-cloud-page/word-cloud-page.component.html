@@ -1,0 +1,59 @@
+<main class="cloud-page">
+  <p class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</p>
+  @if (error(); as message) { <p class="message error" role="alert">{{ message }}</p> }
+  @if (unavailable()) { <p class="sync-note" role="status">Synchronisation interrompue, nouvelle tentative en cours…</p> }
+
+  @if (snapshot(); as question) {
+    @if (question.status === 'OPEN') {
+      <section class="open-stage">
+        <header class="question-heading">
+          <h1>{{ question.text }}</h1>
+          <p>{{ question.submissionCount }} réponse{{ question.submissionCount > 1 ? 's' : '' }} enregistrée{{ question.submissionCount > 1 ? 's' : '' }}</p>
+        </header>
+
+        <form class="response-dialog" [formGroup]="responseForm" (ngSubmit)="submit()" aria-labelledby="response-title">
+          <div class="response-number" aria-hidden="true">?</div>
+          <div class="response-copy">
+            <h2 id="response-title">Répondez en un mot</h2>
+            <p>Votre réponse reste anonyme et peut être modifiée tant que la question est ouverte.</p>
+          </div>
+          <div class="response-field">
+            <tui-textfield>
+              <input tuiInput formControlName="text" maxlength="50" autocomplete="off" placeholder="Votre mot" aria-describedby="response-help" />
+            </tui-textfield>
+            <div class="field-meta" id="response-help">
+              @if (question.currentUserResponse) { <span class="acknowledgment">✓ Réponse actuelle : <strong>{{ question.currentUserResponse }}</strong></span> }
+              @else { <span>50 caractères maximum</span> }
+              <span>{{ responseForm.controls.text.value.length }}/50</span>
+            </div>
+          </div>
+          <button tuiButton type="submit" size="l" [disabled]="responseForm.invalid || submitting()">
+            @if (submitting()) { <tui-loader size="s" [inheritColor]="true" /> }
+            {{ question.currentUserResponse ? 'Mettre à jour' : 'Partager mon mot' }}
+          </button>
+        </form>
+      </section>
+    } @else if (question.status === 'REVEALED') {
+      <section class="reveal-stage">
+        <header class="reveal-heading">
+          <h1>{{ question.text }}</h1>
+          <p>{{ question.submissionCount }} réponse{{ question.submissionCount > 1 ? 's' : '' }}.</p>
+        </header>
+        <div class="cloud-field" role="list" aria-label="Nuage de mots révélé">
+          @for (word of cloudWords(); track word.text) {
+            <span role="listitem" class="cloud-word" [style.color]="word.color" [style.font-size]="word.fontSize" [style.transform]="word.rotation" [attr.aria-label]="word.text + ', ' + word.count + ' occurrence' + (word.count > 1 ? 's' : '')" [attr.title]="word.text + ' · ' + word.count + ' occurrence' + (word.count > 1 ? 's' : '')">{{ word.text }}</span>
+          } @empty {
+            <div class="cloud-empty"><strong>Le nuage prend forme</strong><span>Les premiers mots apparaîtront ici.</span></div>
+          }
+        </div>
+      </section>
+    } @else {
+      <section class="waiting-stage"><span class="track-mark" aria-hidden="true">⌁</span><span class="eyebrow">ENTRACTE</span><h1>Le prochain mot se prépare</h1><p>Gardez cette page ouverte, la question apparaîtra automatiquement.</p></section>
+    }
+  } @else {
+    <section class="waiting-stage">
+      <div class="waiting-orbit" aria-hidden="true"><span></span><i></i></div>
+      <h1>En attente de la prochaine question</h1>
+    </section>
+  }
+</main>

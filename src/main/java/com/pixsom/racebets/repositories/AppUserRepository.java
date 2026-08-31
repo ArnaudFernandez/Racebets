@@ -11,6 +11,9 @@ import java.util.Optional;
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByEmail(String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<AppUser> findLockedByEmail(String email);
+
     boolean existsByEmail(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

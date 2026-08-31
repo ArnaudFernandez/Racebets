@@ -1,6 +1,7 @@
 package com.pixsom.racebets.admin.history;
 
 import com.pixsom.racebets.admin.NotFoundException;
+import com.pixsom.racebets.admin.race.RaceWorkflowService;
 import com.pixsom.racebets.admin.history.dto.RaceHistoryDetailResponse;
 import com.pixsom.racebets.admin.history.dto.RaceHistoryResultResponse;
 import com.pixsom.racebets.admin.history.dto.RaceHistorySummaryResponse;
@@ -32,12 +33,14 @@ public class RaceHistoryService {
     private final RaceRepository raceRepository;
     private final RaceEntryRepository raceEntryRepository;
     private final BetRepository betRepository;
+    private final RaceWorkflowService raceWorkflowService;
 
     public RaceHistoryService(RaceRepository raceRepository, RaceEntryRepository raceEntryRepository,
-                              BetRepository betRepository) {
+                              BetRepository betRepository, RaceWorkflowService raceWorkflowService) {
         this.raceRepository = raceRepository;
         this.raceEntryRepository = raceEntryRepository;
         this.betRepository = betRepository;
+        this.raceWorkflowService = raceWorkflowService;
     }
 
     @Transactional(readOnly = true)
@@ -78,13 +81,20 @@ public class RaceHistoryService {
                 finishedAt(race),
                 bets.size(),
                 entries.stream().map(entry -> new RaceHistoryResultResponse(
-                        entry.getRank(), entry.getHorseNumber(), entry.getHorse().getName(),
+                        entry.getId(), entry.getRank(), entry.getHorseNumber(), entry.getHorse().getName(),
                         voteCounts.getOrDefault(entry.getId(), 0L))).toList(),
                 IntStream.range(0, winningBets.size())
                         .mapToObj(index -> toWinner(winningBets.get(index), index + 1))
                         .toList(),
                 bets.stream().map(this::toVote).toList()
         );
+    }
+
+    @Transactional
+    public RaceHistoryDetailResponse correctResult(Long raceId, List<Long> expectedOrderedEntryIds,
+                                                   List<Long> orderedEntryIds) {
+        raceWorkflowService.correctResult(raceId, expectedOrderedEntryIds, orderedEntryIds);
+        return findById(raceId);
     }
 
     private RaceHistorySummaryResponse toSummary(Race race, List<RaceEntry> entries, List<Bet> bets) {

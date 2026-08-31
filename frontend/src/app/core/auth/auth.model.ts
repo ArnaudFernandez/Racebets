@@ -20,6 +20,7 @@ export interface UserProfile {
   readonly birthDate: string | null;
   readonly email: string;
   readonly present: boolean;
+  readonly tutorialCompleted: boolean;
   readonly roles: readonly UserRole[];
 }
 
@@ -29,6 +30,15 @@ export interface LoginResponse {
   readonly expiresIn: number;
   readonly roles: readonly UserRole[];
   readonly user: UserProfile;
+}
+
+export interface AuthProviders {
+  readonly google: boolean;
+}
+
+export interface OAuthCodeExchangeRequest {
+  readonly code: string;
+  readonly accessCode?: string;
 }
 
 export interface AuthSession {

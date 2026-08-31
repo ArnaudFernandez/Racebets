@@ -2,6 +2,7 @@ package com.pixsom.racebets.app;
 
 import com.pixsom.racebets.app.dto.AppFeatureSettingsRequest;
 import com.pixsom.racebets.app.dto.AppFeatureSettingsResponse;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,7 +25,7 @@ public class AppFeatureSettingsController {
     }
 
     @PutMapping("/admin/app/features")
-    public AppFeatureSettingsResponse update(@RequestBody AppFeatureSettingsRequest request) {
+    public AppFeatureSettingsResponse update(@Valid @RequestBody AppFeatureSettingsRequest request) {
         return service.update(request);
     }
 }

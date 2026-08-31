@@ -1,6 +1,7 @@
 package com.pixsom.racebets.admin.history;
 
 import com.pixsom.racebets.admin.NotFoundException;
+import com.pixsom.racebets.admin.race.RaceWorkflowService;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.entities.Bet;
 import com.pixsom.racebets.entities.Horse;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,12 +36,13 @@ class RaceHistoryServiceTest {
     @Mock RaceRepository raceRepository;
     @Mock RaceEntryRepository raceEntryRepository;
     @Mock BetRepository betRepository;
+    @Mock RaceWorkflowService raceWorkflowService;
 
     private RaceHistoryService service;
 
     @BeforeEach
     void setUp() {
-        service = new RaceHistoryService(raceRepository, raceEntryRepository, betRepository);
+        service = new RaceHistoryService(raceRepository, raceEntryRepository, betRepository, raceWorkflowService);
     }
 
     @Test
@@ -81,6 +84,7 @@ class RaceHistoryServiceTest {
         assertThat(detail.winners()).extracting("userDisplayName").containsExactly("Alice Test", "Bruno Test");
         assertThat(detail.winners()).extracting("speedRank").containsExactly(1, 2);
         assertThat(detail.votes()).hasSize(3);
+        assertThat(detail.result()).extracting("entryId").containsExactly(10L, 11L);
         assertThat(detail.result().getFirst().voteCount()).isEqualTo(2);
     }
 
@@ -93,6 +97,21 @@ class RaceHistoryServiceTest {
         assertThatThrownBy(() -> service.findById(1L))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Finished race not found");
+    }
+
+    @Test
+    void correctionReturnsTheRecalculatedHistoryDetail() {
+        Race race = race(1L, "Prix de Paris", "2026-07-02T12:00:00Z");
+        RaceEntry winner = entry(11L, race, "Bellino II", 1);
+        when(raceRepository.findById(1L)).thenReturn(Optional.of(race));
+        when(raceEntryRepository.findAllByRace_Id(any(), any(Sort.class))).thenReturn(List.of(winner));
+        when(betRepository.findAllByRaceEntry_Race_IdOrderByDateTimeBetAscIdAsc(1L)).thenReturn(List.of());
+
+        var detail = service.correctResult(1L, List.of(11L), List.of(11L));
+
+        verify(raceWorkflowService).correctResult(1L, List.of(11L), List.of(11L));
+        assertThat(detail.result()).extracting("entryId").containsExactly(11L);
+        assertThat(detail.result().getFirst().horseName()).isEqualTo("Bellino II");
     }
 
     private Race race(Long id, String name, String finishedAt) {

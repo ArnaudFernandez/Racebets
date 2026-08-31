@@ -25,17 +25,26 @@ public class AppFeatureSettingsService {
 
     @Transactional
     public AppFeatureSettingsResponse update(AppFeatureSettingsRequest request) {
-        if (!request.bettingEnabled() && !request.quizEnabled()) {
-            throw new ConflictException("At least one application feature must remain enabled");
-        }
-
-        AppFeatureSettings settings = repository.findById(SINGLETON_ID).orElseGet(AppFeatureSettings::new);
-        settings.setBettingEnabled(request.bettingEnabled());
-        settings.setQuizEnabled(request.quizEnabled());
+        AppFeatureSettings settings = repository.findLockedById(SINGLETON_ID).orElseGet(AppFeatureSettings::new);
+        settings.setActiveMode(request.activeMode());
         return toResponse(repository.save(settings));
     }
 
+    @Transactional
+    public void requireActiveMode(AppMode requiredMode) {
+        AppMode activeMode = repository.findReadLockedById(SINGLETON_ID)
+                .map(AppFeatureSettings::getActiveMode)
+                .orElse(AppMode.BETTING);
+        requireMode(requiredMode, activeMode);
+    }
+
+    private void requireMode(AppMode requiredMode, AppMode activeMode) {
+        if (activeMode != requiredMode) {
+            throw new ConflictException("Application mode " + requiredMode + " is not active");
+        }
+    }
+
     private AppFeatureSettingsResponse toResponse(AppFeatureSettings settings) {
-        return new AppFeatureSettingsResponse(settings.isBettingEnabled(), settings.isQuizEnabled());
+        return new AppFeatureSettingsResponse(settings.getActiveMode());
     }
 }

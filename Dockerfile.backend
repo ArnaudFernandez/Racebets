@@ -17,7 +17,8 @@ WORKDIR /app
 RUN apk upgrade --no-cache \
     && apk add --no-cache curl \
     && addgroup -S -g 10001 appuser \
-    && adduser -S -D -H -u 10001 -G appuser -s /sbin/nologin appuser
+    && adduser -S -D -H -u 10001 -G appuser -s /sbin/nologin appuser \
+    && install -d -o appuser -g appuser /var/lib/racebets/race-images
 
 COPY --from=build --chown=appuser:appuser /workspace/target/*.jar /app/app.jar
 

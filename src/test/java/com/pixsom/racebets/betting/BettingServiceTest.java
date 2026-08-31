@@ -1,6 +1,8 @@
 package com.pixsom.racebets.betting;
 
 import com.pixsom.racebets.admin.ConflictException;
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.entities.Bet;
 import com.pixsom.racebets.entities.Horse;
@@ -37,12 +39,14 @@ class BettingServiceTest {
     @Mock RaceEntryRepository raceEntryRepository;
     @Mock BetRepository betRepository;
     @Mock AppUserRepository appUserRepository;
+    @Mock AppFeatureSettingsService featureSettingsService;
 
     private BettingService service;
 
     @BeforeEach
     void setUp() {
-        service = new BettingService(raceRepository, raceEntryRepository, betRepository, appUserRepository);
+        service = new BettingService(
+                raceRepository, raceEntryRepository, betRepository, appUserRepository, featureSettingsService);
     }
 
     @Test
@@ -58,6 +62,18 @@ class BettingServiceTest {
     }
 
     @Test
+    void inactiveBettingModeRejectsBeforeDomainLocks() {
+        org.mockito.Mockito.doThrow(new ConflictException("Application mode BETTING is not active"))
+                .when(featureSettingsService).requireActiveMode(AppMode.BETTING);
+
+        assertThatThrownBy(() -> service.placeBet(1L, 10L, 5L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("not active");
+        verify(appUserRepository, org.mockito.Mockito.never()).findLockedById(any());
+        verify(raceRepository, org.mockito.Mockito.never()).findLockedById(any());
+    }
+
+    @Test
     void firstSelectionCreatesServerTimestampedBet() {
         AppUser user = user(5L);
         Race race = race(1L, RaceState.BETTING);
@@ -67,6 +83,7 @@ class BettingServiceTest {
 
         service.placeBet(1L, 10L, 5L);
 
+        verify(featureSettingsService).requireActiveMode(AppMode.BETTING);
         ArgumentCaptor<Bet> captor = ArgumentCaptor.forClass(Bet.class);
         verify(betRepository).save(captor.capture());
         assertThat(captor.getValue().getRaceEntry()).isSameAs(entry);

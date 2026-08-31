@@ -1,5 +1,7 @@
 package com.pixsom.racebets.betting;
 
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.entities.Bet;
 import com.pixsom.racebets.entities.Horse;
@@ -27,12 +29,13 @@ class BetHistoryServiceTest {
 
     @Mock BetRepository betRepository;
     @Mock RaceEntryRepository raceEntryRepository;
+    @Mock AppFeatureSettingsService featureSettingsService;
 
     private BetHistoryService service;
 
     @BeforeEach
     void setUp() {
-        service = new BetHistoryService(betRepository, raceEntryRepository);
+        service = new BetHistoryService(betRepository, raceEntryRepository, featureSettingsService);
     }
 
     @Test
@@ -91,6 +94,7 @@ class BetHistoryServiceTest {
         when(betRepository.existsByUser_IdAndRaceEntry_Race_State(5L, RaceState.FINISHED)).thenReturn(false);
 
         assertThat(service.hasHistory(5L)).isFalse();
+        org.mockito.Mockito.verify(featureSettingsService).requireActiveMode(AppMode.BETTING);
     }
 
     private Race race(Long id, String name, String finishedAt) {

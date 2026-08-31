@@ -2,6 +2,8 @@ package com.pixsom.racebets.quiz;
 
 import com.pixsom.racebets.admin.ConflictException;
 import com.pixsom.racebets.admin.NotFoundException;
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.quiz.dto.QuizAnswerRequest;
 import com.pixsom.racebets.quiz.dto.QuizAnswerResponse;
@@ -56,19 +58,22 @@ public class QuizService {
     private final QuizParticipantRepository participantRepository;
     private final QuizSubmissionRepository submissionRepository;
     private final AppUserRepository appUserRepository;
+    private final AppFeatureSettingsService featureSettingsService;
 
     public QuizService(
             QuizSetRepository quizSetRepository,
             QuizSessionRepository quizSessionRepository,
             QuizParticipantRepository participantRepository,
             QuizSubmissionRepository submissionRepository,
-            AppUserRepository appUserRepository
+            AppUserRepository appUserRepository,
+            AppFeatureSettingsService featureSettingsService
     ) {
         this.quizSetRepository = quizSetRepository;
         this.quizSessionRepository = quizSessionRepository;
         this.participantRepository = participantRepository;
         this.submissionRepository = submissionRepository;
         this.appUserRepository = appUserRepository;
+        this.featureSettingsService = featureSettingsService;
     }
 
     @Transactional(readOnly = true)
@@ -190,19 +195,27 @@ public class QuizService {
                 .toList();
     }
 
+    @Transactional
+    public List<QuizSessionSummaryResponse> findPlayerLiveSessions() {
+        featureSettingsService.requireActiveMode(AppMode.QUIZ);
+        return findLiveSessions();
+    }
+
     @Transactional(readOnly = true)
     public QuizSessionSnapshotResponse findAdminSessionSnapshot(Long sessionId) {
         return toSnapshot(findSession(sessionId), null, true);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public QuizSessionSnapshotResponse findSessionSnapshot(Long sessionId, Authentication authentication) {
+        featureSettingsService.requireActiveMode(AppMode.QUIZ);
         AppUser user = authentication == null ? null : currentUser(authentication);
         return toSnapshot(findSession(sessionId), user, false);
     }
 
     @Transactional
     public QuizSessionSnapshotResponse joinSession(Long sessionId, Authentication authentication) {
+        featureSettingsService.requireActiveMode(AppMode.QUIZ);
         QuizSession session = findSession(sessionId);
         if (session.getPhase() == QuizSessionPhase.FINISHED) {
             throw new ConflictException("This quiz session is already finished");
@@ -219,6 +232,7 @@ public class QuizService {
 
     @Transactional
     public QuizSessionSnapshotResponse submitAnswer(Long sessionId, Long answerId, Authentication authentication) {
+        featureSettingsService.requireActiveMode(AppMode.QUIZ);
         QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.QUESTION_OPEN);
         AppUser user = currentUser(authentication);

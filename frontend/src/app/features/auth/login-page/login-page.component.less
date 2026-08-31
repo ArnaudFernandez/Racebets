@@ -1,12 +1,12 @@
 :host { display: block; }
-.login-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem); gap: clamp(2rem, 6vw, 6rem); align-items: center; width: min(72rem, 100%); min-block-size: calc(100vh - 4.25rem); margin-inline: auto; padding: clamp(1.5rem, 5vw, 4rem); }
+.login-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem); gap: clamp(2rem, 6vw, 6rem); align-items: center; width: min(72rem, 100%); min-block-size: 100vh; margin-inline: auto; padding: clamp(1.5rem, 5vw, 4rem); }
 .login-brief { display: grid; gap: 1.25rem; align-content: center; }
 .login-brief img { inline-size: 4.5rem; block-size: 4.5rem; object-fit: contain; }
 .login-brief h1 { max-inline-size: 11ch; margin: 0; font-size: clamp(2.8rem, 6vw, 5.5rem); line-height: .98; letter-spacing: -.065em; }
 .login-brief p { max-inline-size: 34rem; margin: 0; color: var(--rb-muted); font-size: 1.05rem; line-height: 1.65; }
 .login-card { inline-size: 100%; padding: clamp(1.25rem, 3vw, 2rem) !important; border: 1px solid var(--rb-line); border-radius: 1.25rem; background: white; box-shadow: var(--rb-shadow-soft); }
 .login-card h1 { margin: 0; font-size: 1.75rem; letter-spacing: -.04em; }
-.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; margin-block-start: 1.25rem; padding: .25rem; border-radius: .75rem; background: var(--rb-panel); }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; padding: .25rem; border-radius: .75rem; background: var(--rb-panel); }
 .mode-option { min-block-size: 2.6rem; border: 0; border-radius: .6rem; background: transparent; color: var(--rb-muted); cursor: pointer; font-size: .85rem; font-weight: 650; }
 .mode-option.active { background: white; color: var(--rb-ink); box-shadow: 0 .15rem .5rem rgba(23, 34, 28, .08); }
 .form, .field-copy { display: grid; gap: .55rem; }
@@ -14,5 +14,13 @@
 .field-copy { color: var(--rb-muted); font-size: .8rem; font-weight: 650; }
 .identity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .message { margin-block-start: 1rem; }
+.google-button { display: flex; align-items: center; justify-content: center; gap: .7rem; inline-size: 100%; min-block-size: 3rem; margin-block-start: 1.25rem; border: 1px solid var(--rb-line); border-radius: .75rem; background: white; color: var(--rb-ink); cursor: pointer; font: inherit; font-weight: 650; }
+.google-button:hover:not(:disabled) { background: var(--rb-panel); }
+.google-button:focus-visible { outline: .18rem solid currentColor; outline-offset: .15rem; }
+.google-button:disabled { cursor: wait; opacity: .62; }
+.google-button svg { inline-size: 1.25rem; block-size: 1.25rem; flex: none; }
+.separator { display: flex; align-items: center; gap: .75rem; margin-block: 0.25rem; color: var(--rb-muted); font-size: .75rem; }
+.separator::before, .separator::after { content: ''; block-size: 1px; flex: 1; background: var(--rb-line); }
+.link-explanation { margin: 1.25rem 0 0; color: var(--rb-muted); font-size: .9rem; line-height: 1.55; }
 @media (max-width: 54rem) { .login-shell { grid-template-columns: 1fr; max-inline-size: 32rem; min-block-size: auto; padding-block: 2rem; } .login-brief { text-align: center; justify-items: center; } .login-brief h1 { font-size: clamp(2.2rem, 10vw, 3.4rem); } .login-brief p { font-size: .95rem; } }
 @media (max-width: 32rem) { .login-shell { padding: 1rem; } .identity-grid { grid-template-columns: 1fr; } .login-card { padding: 1.1rem !important; } }

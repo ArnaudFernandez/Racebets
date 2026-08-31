@@ -60,7 +60,7 @@ public class AuthService {
         AppUser user = appUserRepository.findByEmail(normalizeEmail(loginRequest.email()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        if (!passwordEncoder.matches(loginRequest.accessCode(), user.getPasswordHash())) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(loginRequest.accessCode(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -79,7 +79,15 @@ public class AuthService {
         return UserProfileResponse.from(user);
     }
 
-    private LoginResponse tokenResponse(AppUser user) {
+    @Transactional
+    public UserProfileResponse completeTutorial(Long userId) {
+        AppUser user = appUserRepository.findLockedById(userId)
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        user.setTutorialCompleted(true);
+        return UserProfileResponse.from(user);
+    }
+
+    public LoginResponse tokenResponse(AppUser user) {
         String token = jwtService.generateToken(user);
         return new LoginResponse(token,
                 "Bearer",

@@ -2,11 +2,12 @@
   <a class="back-link" routerLink="/admin">← Retour aux courses</a>
 
   @if (race(); as currentRace) {
-    <header class="control-hero">
-      <div>
-        <span class="control-meta">Course #{{ currentRace.id }}</span>
+    <header class="control-hero race-context-hero" [class.has-race-image]="currentRace.raceImgUrl">
+      @if (currentRace.raceImgUrl; as imageUrl) { <img class="control-hero-image race-context-image" [src]="imageUrl" [alt]="''" /> }
+      <div class="race-context-copy">
+        <span class="control-meta race-context-meta">Course #{{ currentRace.id }}</span>
         <h1>{{ currentRace.name }}</h1>
-        <div class="state-line">
+        <div class="state-line race-context-state">
           <span class="state-dot" [class.live]="currentRace.state === 'BETTING'"></span>
           <strong>{{ stateLabel(currentRace.state) }}</strong>
           <span>· {{ currentRace.entries.length }} partants</span>
@@ -110,27 +111,29 @@
         </header>
         <p class="panel-copy">Placez les chevaux dans leur ordre d’arrivée. Le premier sera déclaré gagnant.</p>
 
-        <ol class="arrival-list">
-          @for (entry of orderedEntries(); track entry.entryId; let index = $index) {
-            <li>
-              <span class="rank">{{ index + 1 }}</span>
-              <span class="arrival-horse"><strong>{{ entry.horseName }}</strong></span>
-              @if (currentRace.state === 'BET_CLOSED') {
-                <span class="order-actions">
-                  <button type="button" [disabled]="index === 0" aria-label="Monter dans le classement" (click)="move(entry.entryId, -1)">↑</button>
-                  <button type="button" [disabled]="index === orderedEntries().length - 1" aria-label="Descendre dans le classement" (click)="move(entry.entryId, 1)">↓</button>
-                </span>
-              }
-            </li>
-          }
-        </ol>
+        <app-race-order-list
+          [entries]="orderedEntries()"
+          [editable]="currentRace.state === 'BET_CLOSED' || (currentRace.state === 'FINISHED' && editingResult())"
+          [disabled]="loading()"
+          (reordered)="reorderEntries($event)"
+        />
 
         @if (currentRace.state === 'BET_CLOSED') {
           <button tuiButton type="button" size="l" [disabled]="loading() || orderedEntries().length === 0" (click)="publishResult()">
             Envoyer le résultat
           </button>
           <p class="publish-warning">Cette action clôt la course et communique immédiatement le résultat aux participants.</p>
-        } @else if (currentRace.state !== 'FINISHED') {
+        } @else if (currentRace.state === 'FINISHED' && editingResult()) {
+          <div class="correction-actions">
+            <button tuiButton type="button" appearance="secondary" [disabled]="loading()" (click)="cancelResultEdition()">Annuler</button>
+            <button tuiButton type="button" [disabled]="!resultChanged() || loading()" (click)="requestResultCorrection()">Enregistrer la correction</button>
+          </div>
+          <p class="publish-warning">Les gagnants et les statuts de tous les joueurs seront recalculés.</p>
+        } @else if (currentRace.state === 'FINISHED') {
+          <button tuiButton type="button" size="l" appearance="secondary" [disabled]="loading()" (click)="editResult()">
+            Modifier le classement
+          </button>
+        } @else {
           <div class="locked-note">L’ordre d’arrivée sera disponible une fois les paris arrêtés.</div>
         }
       </section>
@@ -160,4 +163,23 @@
       }
     </section>
   }
+
+  <ng-template
+    [tuiDialog]="correctionDialogOpen()"
+    (tuiDialogChange)="correctionDialogOpen.set($event)"
+    [tuiDialogOptions]="{label: 'Corriger le résultat ?', size: 's'}"
+  >
+    <section class="correction-dialog">
+      @if (winnerChanged()) {
+        <p>Le gagnant passera de <strong>{{ originalWinnerName() }}</strong> à <strong>{{ correctedWinnerName() }}</strong>.</p>
+      } @else {
+        <p>Le gagnant reste <strong>{{ originalWinnerName() }}</strong>, mais l’ordre des places suivantes sera modifié.</p>
+      }
+      <p>Cette correction recalculera le résultat de chaque joueur.</p>
+      <div class="dialog-actions">
+        <button tuiButton type="button" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmResultCorrection()">Confirmer la correction</button>
+        <button tuiButton type="button" appearance="secondary" [disabled]="loading()" (click)="cancelResultCorrection()">Revenir au classement</button>
+      </div>
+    </section>
+  </ng-template>
 </main>

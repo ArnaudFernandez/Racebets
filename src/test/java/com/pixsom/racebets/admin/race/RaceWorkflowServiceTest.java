@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,6 +123,74 @@ class RaceWorkflowServiceTest {
         assertThat(first.getRank()).isEqualTo(2);
         assertThat(winningBet.getState()).isEqualTo(BetState.WON);
         assertThat(losingBet.getState()).isEqualTo(BetState.LOST);
+    }
+
+    @Test
+    void correctingResultReplacesRanksAndSettlesBetsWithoutChangingBusinessDates() {
+        Race race = race(1L, RaceState.FINISHED);
+        Instant finishedAt = Instant.parse("2026-07-28T09:00:00Z");
+        race.setFinishedAt(finishedAt);
+        RaceEntry formerWinner = entry(10L, race, 4, "Ourasi");
+        formerWinner.setRank(1);
+        RaceEntry newWinner = entry(11L, race, 7, "Bellino II");
+        newWinner.setRank(2);
+        Bet formerWinningBet = bet(100L, formerWinner);
+        formerWinningBet.markAsWon();
+        Bet newWinningBet = bet(101L, newWinner);
+        newWinningBet.markAsLost();
+        Instant firstBetDate = formerWinningBet.getDateTimeBet();
+        Instant secondBetDate = newWinningBet.getDateTimeBet();
+        when(raceRepository.findLockedById(1L)).thenReturn(Optional.of(race));
+        when(raceEntryRepository.findAllByRace_Id(any(), any(Sort.class)))
+                .thenReturn(List.of(formerWinner, newWinner));
+        when(betRepository.findAllByRaceEntry_Race_IdOrderByDateTimeBetAscIdAsc(1L))
+                .thenReturn(List.of(formerWinningBet, newWinningBet));
+        service.correctResult(1L, List.of(10L, 11L), List.of(11L, 10L));
+
+        assertThat(race.getState()).isEqualTo(RaceState.FINISHED);
+        assertThat(race.getFinishedAt()).isEqualTo(finishedAt);
+        assertThat(newWinner.getRank()).isEqualTo(1);
+        assertThat(formerWinner.getRank()).isEqualTo(2);
+        assertThat(newWinningBet.getState()).isEqualTo(BetState.WON);
+        assertThat(formerWinningBet.getState()).isEqualTo(BetState.LOST);
+        assertThat(formerWinningBet.getDateTimeBet()).isEqualTo(firstBetDate);
+        assertThat(newWinningBet.getDateTimeBet()).isEqualTo(secondBetDate);
+    }
+
+    @Test
+    void correctingResultRejectsRaceThatIsNotFinished() {
+        Race race = race(1L, RaceState.BET_CLOSED);
+        when(raceRepository.findLockedById(1L)).thenReturn(Optional.of(race));
+
+        assertThatThrownBy(() -> service.correctResult(1L, List.of(10L), List.of(10L)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Only a finished race result can be corrected");
+    }
+
+    @Test
+    void correctingResultRejectsAnIncompleteOrDuplicateOrder() {
+        Race race = race(1L, RaceState.FINISHED);
+        RaceEntry first = entry(10L, race, 4, "Ourasi");
+        RaceEntry second = entry(11L, race, 7, "Bellino II");
+        when(raceRepository.findLockedById(1L)).thenReturn(Optional.of(race));
+        when(raceEntryRepository.findAllByRace_Id(any(), any(Sort.class))).thenReturn(List.of(first, second));
+
+        assertThatThrownBy(() -> service.correctResult(1L, List.of(10L, 11L), List.of(10L, 10L)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("The finish order must contain every runner exactly once");
+    }
+
+    @Test
+    void correctingResultRejectsAStaleOfficialOrder() {
+        Race race = race(1L, RaceState.FINISHED);
+        RaceEntry first = entry(10L, race, 4, "Ourasi");
+        RaceEntry second = entry(11L, race, 7, "Bellino II");
+        when(raceRepository.findLockedById(1L)).thenReturn(Optional.of(race));
+        when(raceEntryRepository.findAllByRace_Id(any(), any(Sort.class))).thenReturn(List.of(first, second));
+
+        assertThatThrownBy(() -> service.correctResult(1L, List.of(11L, 10L), List.of(10L, 11L)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("The race result has changed; reload it before applying your correction");
     }
 
     @Test

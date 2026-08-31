@@ -11,7 +11,7 @@ public record RegisterRequest(
         @NotBlank @Size(max = 80) String name,
         @NotBlank @Size(max = 80) String surname,
         @Email @NotBlank @Size(max = 180) String email,
-        @Size(min = 8, max = 128) String accessCode,
+        @NotBlank @Size(min = 8, max = 128) String accessCode,
         @Past LocalDate birthDate
 ) {
 }

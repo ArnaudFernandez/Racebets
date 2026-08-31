@@ -1,5 +1,7 @@
 package com.pixsom.racebets.betting;
 
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.betting.dto.BetHistoryResponse;
 import com.pixsom.racebets.entities.Bet;
 import com.pixsom.racebets.entities.RaceEntry;
@@ -21,19 +23,24 @@ public class BetHistoryService {
 
     private final BetRepository betRepository;
     private final RaceEntryRepository raceEntryRepository;
+    private final AppFeatureSettingsService featureSettingsService;
 
-    public BetHistoryService(BetRepository betRepository, RaceEntryRepository raceEntryRepository) {
+    public BetHistoryService(BetRepository betRepository, RaceEntryRepository raceEntryRepository,
+                             AppFeatureSettingsService featureSettingsService) {
         this.betRepository = betRepository;
         this.raceEntryRepository = raceEntryRepository;
+        this.featureSettingsService = featureSettingsService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public boolean hasHistory(Long userId) {
+        featureSettingsService.requireActiveMode(AppMode.BETTING);
         return betRepository.existsByUser_IdAndRaceEntry_Race_State(userId, RaceState.FINISHED);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<BetHistoryResponse> findAll(Long userId) {
+        featureSettingsService.requireActiveMode(AppMode.BETTING);
         List<Bet> bets = betRepository.findAllByUser_IdAndRaceEntry_Race_State(userId, RaceState.FINISHED);
         if (bets.isEmpty()) {
             return List.of();

@@ -99,10 +99,20 @@ JPA : `spring.jpa.open-in-view=false` est configure dans `application.properties
 spring.jpa.open-in-view=false
 ```
 
-JWT : aucun secret de signature n'est versionne. `JWT_SECRET` est obligatoire au demarrage et doit contenir au
-minimum 32 octets. Les tests utilisent uniquement une valeur dediee dans `src/test/resources`.
+JWT : aucun secret de signature de deploiement n'est versionne. `JWT_SECRET` est obligatoire hors du profil `local`
+et doit contenir au minimum 32 octets. Le profil `local` genere un secret ephemere a chaque demarrage lorsque la
+variable d'environnement est absente. Les tests utilisent uniquement une valeur dediee dans `src/test/resources`.
 
 Seeder ADMIN local : desactive par defaut dans `application.properties`, active uniquement avec le profil `local` via `application-local.properties`.
+
+Jeu de demonstration local : le profil `local` cree une question de nuage de mots terminee avec 48 reponses anonymes,
+dont plusieurs variantes identiques. Les comptes `wordcloud-demo-01@racebets.local` a
+`wordcloud-demo-48@racebets.local` utilisent le code local `1234`, stocke avec BCrypt.
+`racebets.demo-word-cloud.enabled=false` desactive l'ensemble partout ailleurs.
+
+Le profil `local` est aussi le profil Spring par defaut lorsqu'aucun profil actif n'est fourni. Un lancement direct
+depuis l'IDE utilise donc H2 avec `ddl-auto=update` et Flyway desactive. Les environnements deployes doivent activer
+explicitement le profil `docker`, qui utilise PostgreSQL et Flyway.
 
 ```properties
 racebets.dev-admin.enabled=false

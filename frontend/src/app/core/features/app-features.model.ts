@@ -1,4 +1,5 @@
+export type AppMode = 'BETTING' | 'QUIZ' | 'WORD_CLOUD';
+
 export interface AppFeatureSettings {
-  readonly bettingEnabled: boolean;
-  readonly quizEnabled: boolean;
+  readonly activeMode: AppMode;
 }
