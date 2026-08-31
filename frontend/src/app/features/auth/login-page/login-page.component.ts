@@ -2,8 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TuiButton, TuiInput, TuiTitle } from '@taiga-ui/core';
-import { TuiCard, TuiHeader } from '@taiga-ui/layout';
+import { TuiButton, TuiInput } from '@taiga-ui/core';
+import { TuiCard } from '@taiga-ui/layout';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { AppBrandingService } from '../../../core/branding/app-branding.service';
@@ -12,7 +12,7 @@ import { TutorialService } from '../../../core/tutorial/tutorial.service';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, TuiButton, TuiCard, TuiHeader, TuiInput, TuiTitle],
+  imports: [ReactiveFormsModule, TuiButton, TuiCard, TuiInput],
   templateUrl: './login-page.component.html',
   styleUrl: './login-page.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -53,7 +53,6 @@ export class LoginPageComponent {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(80)]
     }),
-    birthDate: new FormControl<string | null>(null),
     email: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.email, Validators.maxLength(180)]
@@ -116,7 +115,6 @@ export class LoginPageComponent {
       await this.auth.register({
         name: this.registerForm.controls.name.value.trim(),
         surname: this.registerForm.controls.surname.value.trim(),
-        birthDate: this.registerForm.controls.birthDate.value,
         email: this.registerForm.controls.email.value.trim(),
         accessCode: this.registerForm.controls.accessCode.value
       });

@@ -12,6 +12,7 @@ RUN npm run build
 FROM nginx:1.29.8-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de AS runtime
 
 ENV BACKEND_URL=http://backend:8080 \
+    OLIFAN_REDIRECT_URL=https://olifan.pixsom.fr \
     NGINX_ENVSUBST_OUTPUT_DIR=/tmp
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf

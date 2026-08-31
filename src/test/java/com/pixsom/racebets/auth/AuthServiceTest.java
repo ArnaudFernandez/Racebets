@@ -2,6 +2,7 @@ package com.pixsom.racebets.auth;
 
 import com.pixsom.racebets.auth.dto.LoginRequest;
 import com.pixsom.racebets.auth.dto.LoginResponse;
+import com.pixsom.racebets.auth.dto.RegisterRequest;
 import com.pixsom.racebets.auth.dto.UserProfileResponse;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.enums.Role;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,6 +64,25 @@ class AuthServiceTest {
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(3_600_000L);
         assertThat(response.roles()).containsExactly(Role.USER);
+    }
+
+    @Test
+    void registrationDoesNotCollectABirthDate() {
+        when(passwordEncoder.encode("access-code")).thenReturn("encoded-access-code");
+        when(appUserRepository.save(org.mockito.ArgumentMatchers.any(AppUser.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtService.generateToken(org.mockito.ArgumentMatchers.any(AppUser.class))).thenReturn("signed.jwt.token");
+
+        authService.register(new RegisterRequest(
+                " Camille ", " Martin ", "CAMILLE@EXAMPLE.COM", "access-code"));
+
+        ArgumentCaptor<AppUser> userCaptor = ArgumentCaptor.forClass(AppUser.class);
+        verify(appUserRepository).save(userCaptor.capture());
+        AppUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getName()).isEqualTo("Camille");
+        assertThat(savedUser.getSurname()).isEqualTo("Martin");
+        assertThat(savedUser.getEmail()).isEqualTo("camille@example.com");
+        assertThat(savedUser.getBirthDate()).isNull();
     }
 
     @Test

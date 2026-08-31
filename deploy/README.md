@@ -92,6 +92,22 @@ Hibernate en valide la conformite. Toute evolution future du schema prend un nou
 - HTTPS : active avec un certificat Let's Encrypt.
 - `backend`, `postgres` et leurs ports ne doivent avoir aucun domaine ni publication de port.
 
+### QR code permanent Olifan
+
+Le QR code imprime doit pointer vers `https://go.pixsom.fr/olifan`, et non directement vers l'application. Le frontend
+repond sur ce domaine par une redirection HTTP 302 non mise en cache vers `OLIFAN_REDIRECT_URL`, dont la valeur par
+defaut est `https://olifan.pixsom.fr`. La destination peut ainsi changer sans reimprimer le QR code.
+
+1. Creer un enregistrement DNS `go.pixsom.fr` pointant vers le VPS Dokploy.
+2. Dans les domaines du Compose Dokploy, associer `go.pixsom.fr` au service `frontend`, port `8080`, avec HTTPS et
+   un certificat Let's Encrypt.
+3. Definir `OLIFAN_REDIRECT_URL=https://olifan.pixsom.fr` dans l'environnement du Compose.
+4. Apres deploiement, verifier `https://go.pixsom.fr/olifan` depuis plusieurs telephones avant de generer les fichiers
+   d'impression.
+
+Pour changer la destination, modifier uniquement `OLIFAN_REDIRECT_URL` dans Dokploy puis redeployer le Compose. Ne
+jamais changer l'URL encodee dans le QR deja imprime.
+
 Pour la staging, desactiver le declenchement Dokploy `On Push`. Le workflow GitHub appelle l'API Dokploy seulement
 apres la publication reussie des deux images, ce qui evite de redeployer les anciens tags pendant que la CI construit
 encore les nouveaux. Creer dans GitHub un environnement nomme `staging`, puis y definir :

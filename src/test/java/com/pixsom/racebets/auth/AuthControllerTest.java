@@ -57,6 +57,27 @@ class AuthControllerTest {
     }
 
     @Test
+    void registrationDoesNotRequireABirthDate() throws Exception {
+        when(authService.register(any()))
+                .thenReturn(new LoginResponse("signed.jwt.token", "Bearer", 3_600_000L, Set.of(Role.USER)));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Camille",
+                                  "surname": "Martin",
+                                  "email": "camille@example.com",
+                                  "accessCode": "access-code"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").value("signed.jwt.token"));
+
+        verify(authService).register(any());
+    }
+
+    @Test
     void loginRejectsInvalidPayload() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

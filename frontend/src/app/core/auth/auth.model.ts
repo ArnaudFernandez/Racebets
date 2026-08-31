@@ -10,7 +10,6 @@ export interface RegisterRequest {
   readonly surname: string;
   readonly email: string;
   readonly accessCode: string;
-  readonly birthDate: string | null;
 }
 
 export interface UserProfile {

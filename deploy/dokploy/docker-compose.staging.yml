@@ -81,6 +81,7 @@ services:
         condition: service_healthy
     environment:
       BACKEND_URL: http://backend:8080
+      OLIFAN_REDIRECT_URL: ${OLIFAN_REDIRECT_URL:-https://olifan.pixsom.fr}
       NGINX_ENVSUBST_OUTPUT_DIR: /tmp
     expose:
       - "8080"

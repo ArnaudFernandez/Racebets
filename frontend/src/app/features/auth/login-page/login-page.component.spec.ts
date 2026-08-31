@@ -89,14 +89,18 @@ describe('LoginPageComponent', () => {
     fixture.componentInstance.registerForm.setValue({
       name: 'Camille',
       surname: 'Martin',
-      birthDate: null,
       email: 'camille@example.com',
       accessCode: 'access-code'
     });
 
     await register(fixture.componentInstance);
 
-    expect(auth.register).toHaveBeenCalled();
+    expect(auth.register).toHaveBeenCalledOnceWith({
+      name: 'Camille',
+      surname: 'Martin',
+      email: 'camille@example.com',
+      accessCode: 'access-code'
+    });
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/tutorial');
   });
 
