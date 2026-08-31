@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - staging
+      - olifan-group
   pull_request:
     branches:
       - main
       - staging
+      - olifan-group
   workflow_dispatch:
 
 permissions:
