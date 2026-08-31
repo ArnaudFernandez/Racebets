@@ -2,10 +2,10 @@
   <div class="app-frame" [class.authenticated]="auth.isAuthenticated()">
     @if (auth.isAuthenticated() && !tutorialActive()) {
       <header class="app-topbar" [attr.inert]="raceInProgressOnBettingPage() ? '' : null">
-        <a class="brand" routerLink="/" aria-label="Racebets accueil">
-          <span class="brand-mark"><img src="/logo_le_bouscat.png" alt="" /></span>
+        <a class="brand" routerLink="/" [attr.aria-label]="branding.appName() + ' accueil'">
+          <span class="brand-mark"><img [src]="branding.imageUrl()" alt="" /></span>
           <span>
-            <strong>Racebets</strong>
+            <strong>{{ branding.appName() }}</strong>
           </span>
         </a>
 
@@ -20,7 +20,12 @@
               Quiz
             </a>
           }
-          @if (betHistory.hasHistory()) {
+          @if (features.wordCloudEnabled()) {
+            <a class="nav-link" routerLink="/word-cloud" routerLinkActive="active">
+              Nuage de mots
+            </a>
+          }
+          @if (features.bettingEnabled() && betHistory.hasHistory()) {
             <a class="nav-link" routerLink="/history" routerLinkActive="active">
               Historique
             </a>
@@ -55,7 +60,12 @@
             <span>Quiz</span>
           </a>
         }
-        @if (betHistory.hasHistory()) {
+        @if (features.wordCloudEnabled()) {
+          <a routerLink="/word-cloud" routerLinkActive="active">
+            <span>Nuage</span>
+          </a>
+        }
+        @if (features.bettingEnabled() && betHistory.hasHistory()) {
           <a routerLink="/history" routerLinkActive="active">
             <span>Historique</span>
           </a>

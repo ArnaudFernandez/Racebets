@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 
 import { adminGuard } from './core/auth/admin.guard';
 import { authenticatedGuard } from './core/auth/authenticated.guard';
-import { bettingFeatureGuard, quizFeatureGuard } from './core/features/app-feature.guard';
+import { bettingFeatureGuard, quizFeatureGuard, wordCloudFeatureGuard } from './core/features/app-feature.guard';
 import { tutorialGuard } from './core/tutorial/tutorial.guard';
 
 export const routes: Routes = [
@@ -34,6 +34,7 @@ export const routes: Routes = [
       },
       {
         path: 'history',
+        canActivate: [bettingFeatureGuard],
         loadComponent: () =>
           import('./features/betting/bet-history-page/bet-history-page.component').then(
             (component) => component.BetHistoryPageComponent
@@ -79,6 +80,14 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'admin/word-cloud/questions/:questionId',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/word-cloud/admin-word-cloud-control-page/admin-word-cloud-control-page.component').then(
+            (component) => component.AdminWordCloudControlPageComponent
+          )
+      },
+      {
         path: 'admin',
         canActivate: [adminGuard],
         loadComponent: () =>
@@ -92,6 +101,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/quiz/quiz-play-page/quiz-play-page.component').then(
             (component) => component.QuizPlayPageComponent
+          )
+      },
+      {
+        path: 'word-cloud',
+        canActivate: [wordCloudFeatureGuard],
+        loadComponent: () =>
+          import('./features/word-cloud/word-cloud-page/word-cloud-page.component').then(
+            (component) => component.WordCloudPageComponent
           )
       },
       {

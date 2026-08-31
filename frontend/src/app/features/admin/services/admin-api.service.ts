@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { AppBrandingSettings } from '../../../core/branding/app-branding.model';
 import {
   AdminUserRequest,
   AdminUserResponse,
@@ -129,5 +130,13 @@ export class AdminApiService {
 
   deletePartner(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/partners/${id}`));
+  }
+
+  findBranding(): Promise<AppBrandingSettings> {
+    return firstValueFrom(this.http.get<AppBrandingSettings>('/api/app/branding'));
+  }
+
+  updateBranding(formData: FormData): Promise<AppBrandingSettings> {
+    return firstValueFrom(this.http.put<AppBrandingSettings>(`${this.baseUrl}/app/branding`, formData));
   }
 }

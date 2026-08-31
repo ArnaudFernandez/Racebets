@@ -1,6 +1,8 @@
 package com.pixsom.racebets.quiz;
 
 import com.pixsom.racebets.admin.ConflictException;
+import com.pixsom.racebets.app.AppFeatureSettingsService;
+import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.quiz.dto.QuizAnswerRequest;
 import com.pixsom.racebets.quiz.dto.QuizQuestionRequest;
@@ -38,6 +40,7 @@ class QuizServiceTest {
     @Mock QuizParticipantRepository participantRepository;
     @Mock QuizSubmissionRepository submissionRepository;
     @Mock AppUserRepository appUserRepository;
+    @Mock AppFeatureSettingsService featureSettingsService;
     @Mock Authentication authentication;
 
     private QuizService service;
@@ -49,7 +52,8 @@ class QuizServiceTest {
                 quizSessionRepository,
                 participantRepository,
                 submissionRepository,
-                appUserRepository
+                appUserRepository,
+                featureSettingsService
         );
     }
 
@@ -117,9 +121,21 @@ class QuizServiceTest {
 
         service.submitAnswer(3L, secondAnswer.getId(), authentication);
 
+        verify(featureSettingsService).requireActiveMode(AppMode.QUIZ);
         assertThat(existing.getAnswer()).isSameAs(secondAnswer);
         assertThat(existing.isCorrect()).isFalse();
         verify(submissionRepository).save(existing);
+    }
+
+    @Test
+    void inactiveQuizModeRejectsAnswerBeforeSessionLock() {
+        org.mockito.Mockito.doThrow(new ConflictException("Application mode QUIZ is not active"))
+                .when(featureSettingsService).requireActiveMode(AppMode.QUIZ);
+
+        assertThatThrownBy(() -> service.submitAnswer(3L, 10L, authentication))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("not active");
+        verify(quizSessionRepository, never()).findLockedById(any());
     }
 
     @Test

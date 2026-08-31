@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/providers",
-                                        "/api/auth/oauth/exchange", "/api/auth/google/**", "/api/app/features", "/api/race-images/**").permitAll()
+                                        "/api/auth/oauth/exchange", "/api/auth/google/**", "/api/app/features", "/api/app/branding", "/api/app/branding/image", "/api/race-images/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/partners/**").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()

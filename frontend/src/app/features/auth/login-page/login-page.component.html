@@ -1,22 +1,15 @@
 <main class="login-shell">
-  <section class="login-brief" aria-label="Presentation Racebets">
-    <img src="/logo_le_bouscat.png" alt="" />
-    <h1>Vivez la course, simplement.</h1>
-    <p>Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.</p>
+  <section class="login-brief" [attr.aria-label]="'Presentation ' + branding.appName()">
+    <img [src]="branding.imageUrl()" alt="" />
+    <h1>{{ branding.loginTitle() }}</h1>
+    <p>{{ branding.loginSubtitle() }}</p>
   </section>
 
   <section tuiCardLarge="compact" class="login-card">
-    <header tuiHeader="h4">
-      <hgroup tuiTitle>
-        <h1>{{ googleLinkCode() ? 'Relier votre compte' : mode() === 'login' ? 'Bienvenue' : 'Créer un compte' }}</h1>
-        <p tuiSubtitle>{{ googleLinkCode() ? 'Une dernière vérification protège votre compte existant.' : mode() === 'login' ? 'Connectez-vous pour rejoindre l’événement.' : 'Quelques informations suffisent pour participer.' }}</p>
-      </hgroup>
-    </header>
 
     @if (error(); as errorMessage) {
       <p class="message error" role="alert">{{ errorMessage }}</p>
     }
-
     @if (googleLinkCode()) {
       <p class="link-explanation">Cet email correspond déjà à un compte RaceBets. Saisissez votre code d’accès actuel pour le relier à Google. Cette vérification ne sera demandée qu’une fois.</p>
       <form class="form" [formGroup]="googleLinkForm" (ngSubmit)="confirmGoogleLink()">
@@ -56,14 +49,14 @@
         <label class="field-copy">
           Email
           <tui-textfield>
-            <input tuiInput formControlName="email" type="email" placeholder="admin@racebets.local" autocomplete="username" />
+            <input tuiInput formControlName="email" type="email" placeholder="Votre email" autocomplete="username" />
           </tui-textfield>
         </label>
 
         <label class="field-copy">
-          Code d’accès
+          Mot de passe
           <tui-textfield>
-            <input tuiInput formControlName="accessCode" type="password" placeholder="Votre code" autocomplete="current-password" />
+            <input tuiInput formControlName="accessCode" type="password" placeholder="Votre mot de passe" autocomplete="current-password" />
           </tui-textfield>
         </label>
 

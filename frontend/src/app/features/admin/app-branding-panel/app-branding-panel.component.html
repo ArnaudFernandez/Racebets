@@ -1,0 +1,108 @@
+<section class="branding-panel">
+  <header class="branding-hero">
+    <div>
+      <span class="eyebrow">Identité de l’événement</span>
+      <h2>App branding</h2>
+      <p>Personnalisez le nom et le visuel utilisés par les participants.</p>
+    </div>
+    <div class="branding-status" aria-label="Aperçu de l’identité actuelle">
+      <img [src]="branding.imageUrl()" alt="" />
+      <span>{{ branding.appName() }}</span>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <p class="message error" role="alert">{{ message }}</p>
+  }
+  @if (success(); as message) {
+    <p class="message success" role="status">{{ message }}</p>
+  }
+
+  <div class="branding-grid">
+    <article class="branding-form-card" tuiCardLarge="compact">
+      <header tuiHeader="body-m">
+        <hgroup tuiTitle>
+          <h3>Identité affichée</h3>
+          <p tuiSubtitle>
+            Ces éléments sont visibles dans le titre de la page, l’en-tête et la connexion.
+          </p>
+        </hgroup>
+      </header>
+
+      <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+        <label class="field-copy">
+          Nom de l’application
+          <tui-textfield>
+            <input tuiInput formControlName="appName" placeholder="Racebets" autocomplete="off" />
+          </tui-textfield>
+          <small>120 caractères maximum.</small>
+        </label>
+
+        <label class="field-copy">
+          Titre principal écran de connexion
+          <tui-textfield>
+            <input tuiInput formControlName="loginTitle" maxlength="160" autocomplete="off" />
+          </tui-textfield>
+          <small>160 caractères maximum.</small>
+        </label>
+
+        <label class="field-copy">
+          Sous-titre écran de connexion
+          <tui-textfield>
+            <input tuiInput formControlName="loginSubtitle" maxlength="300" autocomplete="off" />
+          </tui-textfield>
+          <small>300 caractères maximum.</small>
+        </label>
+
+        <label class="file-field">
+          <span>Image de l’application</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="selectImage($event)"
+          />
+          <small>{{ selectedImage()?.name ?? 'PNG, JPEG ou WebP · 2 Mo maximum' }}</small>
+        </label>
+
+        <div class="form-actions">
+          <button tuiButton type="submit" [disabled]="loading()">
+            {{ loading() ? 'Enregistrement...' : 'Enregistrer le branding' }}
+          </button>
+          @if (selectedImage() !== null) {
+            <button
+              tuiButton
+              type="button"
+              size="s"
+              appearance="secondary"
+              (click)="resetImageSelection()"
+            >
+              Garder l’image actuelle
+            </button>
+          }
+        </div>
+      </form>
+    </article>
+
+    <aside class="branding-preview" tuiCardLarge="compact">
+      <span class="eyebrow">Aperçu</span>
+      <div class="preview-topbar">
+        <span class="preview-mark"><img [src]="branding.imageUrl()" alt="" /></span>
+        <strong>{{ branding.appName() }}</strong>
+      </div>
+      <div class="preview-login">
+        <img [src]="branding.imageUrl()" alt="" />
+        <div>
+          <strong>{{ branding.loginTitle() }}</strong>
+          <span>{{ branding.loginSubtitle() }}</span>
+        </div>
+      </div>
+      <p>
+        Le changement est appliqué aux prochains chargements et se propage aux écrans déjà ouverts.
+      </p>
+    </aside>
+  </div>
+
+  @if (loading()) {
+    <p class="loading-inline" role="status"><tui-loader size="s" /> Chargement du branding...</p>
+  }
+</section>

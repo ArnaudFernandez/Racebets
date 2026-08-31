@@ -453,8 +453,11 @@ puissent charger les medias sans exposer le JWT dans une URL.
 
 La liste publique ne retourne que les partenaires coches et leurs logos sont mis en cache une heure avec une version
 d'URL basee sur `updatedAt`. Le frontend ne les affiche que lorsque le snapshot live ne contient aucune course. Le
-logo institutionnel `logo_le_bouscat.png`, carre en 600 x 600, est utilise sans deformation dans l'entete, l'ecran
-d'attente, le favicon PNG et l'icone Apple Touch.
+Le branding de l'application est porte par le singleton `AppBrandingSettings`. Le nom est expose dans le titre du
+document et l'entete ; le titre principal et le sous-titre de l'ecran de connexion sont egalement configurables.
+L'image personnalisee est servie par `/api/app/branding/image` avec une URL versionnee. La lecture du branding et de
+son media est publique afin que l'ecran de connexion et les balises `<img>` puissent les charger sans JWT. Le fallback
+reste `logo_le_bouscat.png`, carre en 600 x 600, utilise sans deformation.
 
 ## Administration Et Pilotage Des Quiz
 
@@ -534,4 +537,63 @@ flowchart LR
     E -. Quitter .-> I
     F -. Quitter .-> I
     I --> J[Accueil des paris]
+```
+
+Le guard attend desormais le chargement de la configuration fonctionnelle avant de prendre sa decision. Le tutoriel
+ne demarre que lorsque le mode global vaut `BETTING`. Une navigation directe vers `/tutorial` en mode `QUIZ` ou
+`WORD_CLOUD` est redirigee vers l'ecran actif, ce qui evite qu'un parcours pedagogique de pari apparaisse hors
+contexte.
+
+## Mode D'Application Exclusif
+
+`AppFeatureSettings` ne persiste plus plusieurs booleens independants. La valeur unique `activeMode` accepte
+`BETTING`, `QUIZ` ou `WORD_CLOUD`, ce qui rend impossible un etat ambigu avec plusieurs experiences actives ou aucune.
+L'admin choisit le nouveau mode depuis des cartes radio et confirme dans une modale rappelant l'impact global.
+
+Le frontend relit `/api/app/features` toutes les deux secondes avec `exhaustMap`. Lorsqu'un terminal deja ouvert
+detecte un changement, la navigation de l'ancien mode disparait et l'utilisateur est redirige vers la route du mode
+actif. Les guards restent la seconde barriere lors d'une navigation directe. Le backend verifie aussi le mode sur
+chaque endpoint participant : un client personnalise ne peut donc pas continuer a utiliser un mode masque.
+
+Les transactions participantes prennent un verrou pessimiste partage sur la ligne de configuration. Elles restent
+concurrentes entre elles, tandis que le verrou exclusif du changement de mode attend leur fin puis empeche toute
+nouvelle operation de l'ancien mode. La visibilite et les ecritures basculent ainsi atomiquement sans serialiser tous
+les participants.
+
+## Nuage De Mots Live
+
+Le nuage de mots forme une vertical slice dediee `wordcloud`. Une question porte directement son cycle de vie
+`DRAFT -> OPEN -> REVEALED -> CLOSED`. Les brouillons peuvent etre prepares en avance et sont les seuls etats
+modifiables ou supprimables. Une question terminee peut etre reinitialisee : ses reponses et ses censures sont alors
+supprimees atomiquement avant son retour en `DRAFT`.
+
+Une question live occupe `word_cloud_questions.active_slot = TRUE`. Cette colonne nullable possede une contrainte
+d'unicite et repasse a `NULL` a la cloture. Le service effectue aussi une verification applicative et traduit la
+violation SQL concurrente en `409 Conflict`. La transition et chaque soumission verrouillent la question de facon
+pessimiste, ce qui serialise exactement la fermeture, la revelation et les dernieres reponses.
+
+Chaque utilisateur possede au plus une reponse par question grace a la contrainte `(question_id, user_id)`. Une
+nouvelle soumission avant revelation met a jour cette reponse. L'identite vient exclusivement du claim JWT `userId` ;
+elle n'est jamais acceptee dans le corps HTTP ni exposee dans les snapshots. Les valeurs sont limitees a 80 caracteres,
+les espaces sont normalises et les occurrences sont regroupees sans tenir compte de la casse ni des accents.
+
+Avant `REVEALED`, le snapshot participant retourne la question, son propre texte et le nombre de contributions, mais
+un tableau `words` vide. Apres revelation, il expose uniquement les couples agreges `{text, count}`, tries par nombre
+d'occurrences puis alphabetiquement. Le rendu Angular utilise l'interpolation, une taille bornee et des variations
+visuelles deterministes : aucun HTML utilisateur ni nom de participant n'est rendu.
+
+L'administration possede une console plein ecran par question. Elle relit un snapshot dedie toutes les 1,5 secondes,
+affiche les groupes de reponses tries par occurrence et pilote chaque transition avec confirmation. Une censure est
+stockee dans `word_cloud_moderated_words` par question et texte normalise. Elle masque donc toutes les variantes de
+casse ou d'accent, y compris les nouvelles soumissions identiques, sans supprimer la contribution ni exposer son auteur.
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT: creation admin
+    DRAFT --> OPEN: poser la question
+    OPEN --> OPEN: creer ou modifier sa reponse
+    OPEN --> REVEALED: afficher le nuage
+    OPEN --> CLOSED: fermer sans revelation
+    REVEALED --> CLOSED: fermer
+    CLOSED --> DRAFT: reinitialiser et supprimer les reponses
 ```

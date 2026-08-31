@@ -10,8 +10,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminUserPanelComponent } from '../admin-user-panel/admin-user-panel.component';
 import { AppFeaturePanelComponent } from '../app-feature-panel/app-feature-panel.component';
 import { AdminQuizPanelComponent } from '../../quiz/admin-quiz-panel/admin-quiz-panel.component';
+import { AdminWordCloudPanelComponent } from '../../word-cloud/admin-word-cloud-panel/admin-word-cloud-panel.component';
 import { AdminRaceHistoryPanelComponent } from '../admin-race-history-panel/admin-race-history-panel.component';
 import { AdminPartnerPanelComponent } from '../admin-partner-panel/admin-partner-panel.component';
+import { AppBrandingPanelComponent } from '../app-branding-panel/app-branding-panel.component';
 import {
   HorseAdminRequest,
   HorseAdminResponse,
@@ -21,7 +23,7 @@ import {
 } from '../models/admin-api.model';
 import { AdminApiService } from '../services/admin-api.service';
 
-type AdminSection = 'features' | 'horses' | 'races' | 'history' | 'partners' | 'users' | 'quizzes';
+type AdminSection = 'features' | 'app-branding' | 'horses' | 'races' | 'history' | 'partners' | 'users' | 'quizzes' | 'word-cloud';
 type DeleteTarget =
   | { readonly type: 'horse'; readonly id: number; readonly label: string }
   | { readonly type: 'race'; readonly id: number; readonly label: string };
@@ -32,7 +34,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [AdminPartnerPanelComponent, AdminQuizPanelComponent, AdminRaceHistoryPanelComponent, AdminUserPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiTable, TuiTabs, TuiTitle],
+  imports: [AppBrandingPanelComponent, AdminPartnerPanelComponent, AdminQuizPanelComponent, AdminRaceHistoryPanelComponent, AdminUserPanelComponent, AdminWordCloudPanelComponent, AppFeaturePanelComponent, ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiTable, TuiTabs, TuiTitle],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -44,12 +46,14 @@ export class AdminDashboardComponent {
 
   readonly sections: readonly { readonly id: AdminSection; readonly label: string }[] = [
     { id: 'features', label: 'Affichage' },
+    { id: 'app-branding', label: 'App branding' },
     { id: 'horses', label: 'Chevaux' },
     { id: 'races', label: 'Courses' },
     { id: 'history', label: 'Historique' },
     { id: 'partners', label: 'Partenaires' },
     { id: 'users', label: 'Utilisateurs' },
-    { id: 'quizzes', label: 'Quiz' }
+    { id: 'quizzes', label: 'Quiz' },
+    { id: 'word-cloud', label: 'Nuage de mots' }
   ];
 
   readonly activeSection = signal<AdminSection>(this.initialSection());

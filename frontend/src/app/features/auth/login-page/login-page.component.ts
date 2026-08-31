@@ -6,6 +6,7 @@ import { TuiButton, TuiInput, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { AppBrandingService } from '../../../core/branding/app-branding.service';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
 import { TutorialService } from '../../../core/tutorial/tutorial.service';
 
@@ -20,6 +21,7 @@ export class LoginPageComponent {
   private static readonly GOOGLE_RETURN_URL_KEY = 'racebets.google.returnUrl';
 
   private readonly auth = inject(AuthService);
+  protected readonly branding = inject(AppBrandingService);
   private readonly features = inject(AppFeaturesService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -181,7 +183,12 @@ export class LoginPageComponent {
   private async navigateAfterAuthentication(): Promise<void> {
     const returnUrl = this.safeReturnUrl();
     this.sessionStorage()?.removeItem(LoginPageComponent.GOOGLE_RETURN_URL_KEY);
-    await this.features.ensureLoaded();
+    try {
+      await this.features.ensureLoaded();
+    } catch {
+      this.error.set('Connexion réussie. Chargement de l’événement en cours…');
+      return;
+    }
     if (this.tutorial.shouldStart()) {
       await this.router.navigateByUrl('/tutorial');
       return;

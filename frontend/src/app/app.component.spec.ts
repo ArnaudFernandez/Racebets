@@ -6,6 +6,7 @@ import { provideTaiga } from '@taiga-ui/core';
 
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/auth.service';
+import { AppBrandingService } from './core/branding/app-branding.service';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
@@ -85,5 +86,26 @@ describe('AppComponent', () => {
 
     expect(auth.isAuthenticated()).toBeFalse();
     expect(navigate).toHaveBeenCalledOnceWith('/login');
+  });
+
+  it('updates the document title and favicon when branding changes', () => {
+    const favicon = document.createElement('link');
+    favicon.rel = 'icon';
+    document.head.appendChild(favicon);
+    const fixture = TestBed.createComponent(AppComponent);
+    const branding = TestBed.inject(AppBrandingService);
+
+    fixture.detectChanges();
+    branding.apply({
+      appName: 'Grand Prix',
+      imageUrl: '/api/app/branding/image?v=3',
+      loginTitle: 'Vibrez ensemble',
+      loginSubtitle: 'Une expérience en direct.'
+    });
+    fixture.detectChanges();
+
+    expect(document.title).toBe('Grand Prix');
+    expect(favicon.getAttribute('href')).toBe('/api/app/branding/image?v=3');
+    favicon.remove();
   });
 });

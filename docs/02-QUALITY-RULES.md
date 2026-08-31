@@ -89,7 +89,8 @@ Pour les conflits metier previsibles dans l'admin, utiliser une exception explic
 
 - Signature actuelle : HS256.
 - La cle doit etre fournie par configuration.
-- Dans tous les environnements hors test, `JWT_SECRET` est une variable d'environnement obligatoire.
+- Dans tous les environnements hors `local` et test, `JWT_SECRET` est une variable d'environnement obligatoire.
+- Le profil `local` utilise un secret aleatoire ephemere lorsque `JWT_SECRET` n'est pas fourni.
 - Le secret doit contenir au minimum 32 octets et ne doit jamais etre versionne.
 - Ne pas creer un deuxieme utilitaire JWT concurrent. Le service officiel est `JwtService`.
 - Le token doit contenir le minimum necessaire : `sub`, `userId`, `roles`, `iat`, `exp`.

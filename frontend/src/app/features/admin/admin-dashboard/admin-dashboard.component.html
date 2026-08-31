@@ -4,13 +4,6 @@
       <h1>Administration</h1>
       <p>Pilotez l’événement et ses contenus.</p>
     </div>
-    <div class="hero-stats" aria-label="Resume admin">
-      <span><strong>{{ horses().length }}</strong> chevaux</span>
-      <span><strong>{{ races().length }}</strong> courses</span>
-    </div>
-    <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading()" (click)="refreshAll()">
-      Actualiser
-    </button>
   </section>
 
   @if (error(); as errorMessage) {
@@ -60,12 +53,20 @@
     <app-feature-panel />
   }
 
+  @if (activeSection() === 'app-branding') {
+    <app-branding-panel />
+  }
+
   @if (activeSection() === 'users') {
     <app-admin-user-panel />
   }
 
   @if (activeSection() === 'quizzes') {
     <app-admin-quiz-panel />
+  }
+
+  @if (activeSection() === 'word-cloud') {
+    <app-admin-word-cloud-panel />
   }
 
   @if (activeSection() === 'history') {

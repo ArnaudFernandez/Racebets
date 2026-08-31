@@ -1,4 +1,6 @@
 package com.pixsom.racebets.app.dto;
 
-public record AppFeatureSettingsResponse(boolean bettingEnabled, boolean quizEnabled) {
+import com.pixsom.racebets.app.AppMode;
+
+public record AppFeatureSettingsResponse(AppMode activeMode) {
 }

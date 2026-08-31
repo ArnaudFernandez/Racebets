@@ -1,4 +1,7 @@
 package com.pixsom.racebets.app.dto;
 
-public record AppFeatureSettingsRequest(boolean bettingEnabled, boolean quizEnabled) {
+import com.pixsom.racebets.app.AppMode;
+import jakarta.validation.constraints.NotNull;
+
+public record AppFeatureSettingsRequest(@NotNull AppMode activeMode) {
 }

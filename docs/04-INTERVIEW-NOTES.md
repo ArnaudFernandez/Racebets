@@ -286,3 +286,45 @@ Pourquoi persister la completion cote serveur plutot que dans `localStorage` ?
 Reponse : le besoin est attache au compte et exige que le tutoriel ne reapparaisse jamais. Un stockage navigateur peut
 etre efface et n'est pas partage entre appareils. Le booléen serveur fournit une source de verite durable ; sa mise a
 jour idempotente rend sans danger les doubles clics et nouvelles tentatives reseau.
+
+## Lot 5 : Mode Exclusif Et Nuage De Mots
+
+### Reponse Senior Synthese
+
+J'ai remplace les indicateurs fonctionnels independants par un enum persiste qui rend l'exclusivite structurelle. Le
+nuage de mots est une vertical slice avec une machine d'etats serveur, un slot live unique protege en SQL et des
+transitions serialisees par verrou pessimiste. Chaque reponse est rattachee a l'identite JWT, unique par question et
+modifiable uniquement pendant l'ouverture. Les participants ne recoivent les agregats qu'apres la revelation et
+aucune identite n'est exposee. Le polling REST reste un transport interchangeable avec un futur flux STOMP.
+
+### Killer Questions Lot 5
+
+Pourquoi remplacer trois booleens par un enum `activeMode` ?
+
+Reponse : l'invariant exige exactement un mode. Avec des booleens, plusieurs combinaisons invalides restent
+representables et doivent etre refusees a chaque ecriture. Un enum rend ces etats impossibles dans le modele Java, le
+contrat HTTP et la base.
+
+Pourquoi une contrainte unique sur un slot nullable ?
+
+Reponse : la verification applicative produit un message clair mais deux transactions peuvent la franchir ensemble.
+La valeur `TRUE` reserve l'unique slot live et `NULL` permet de conserver un nombre illimite de questions closes. La
+base reste ainsi le dernier arbitre en concurrence.
+
+Pourquoi verrouiller la question lors d'une soumission ?
+
+Reponse : la fermeture et une derniere reponse peuvent arriver simultanement. Le verrou impose un ordre total : soit
+la reponse est persistee avant la fermeture, soit elle observe l'etat ferme et est refusee. Une simple verification
+sans verrou laisserait une fenetre de course.
+
+Pourquoi stocker un texte affiche et une cle normalisee ?
+
+Reponse : la cle sans casse ni accents regroupe les occurrences attendues, tandis que le texte affiche conserve une
+forme humaine stable. Calculer uniquement au frontend dupliquerait la regle, exposerait des resultats divergents et
+obligerait a transmettre toutes les reponses brutes.
+
+Pourquoi masquer les agregats avant la revelation cote backend ?
+
+Reponse : cacher les mots uniquement dans Angular ne protege rien ; un participant pourrait lire la reponse HTTP. Le
+snapshot joueur retourne donc structurellement une liste vide avant `REVEALED`, alors que la vue admin peut suivre les
+agregats necessaires au pilotage.

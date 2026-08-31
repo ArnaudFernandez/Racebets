@@ -26,7 +26,7 @@ public class QuizPlayerController {
 
     @GetMapping("/live")
     public List<QuizSessionSummaryResponse> liveSessions() {
-        return quizService.findLiveSessions();
+        return quizService.findPlayerLiveSessions();
     }
 
     @GetMapping("/sessions/{sessionId}")
