@@ -9,7 +9,7 @@ le reseau Docker interne.
 Le workflow `.github/workflows/container-build.yml` teste le projet puis publie dans GHCR. Une image n'est publiee
 qu'apres :
 
-- les 77 tests backend executes sur PostgreSQL 17 ;
+- les tests backend executes sur PostgreSQL 17 ;
 - l'application de toutes les migrations Flyway et la validation du schema par Hibernate ;
 - le build, le lint et l'audit des dependances frontend de production ;
 - la validation des deux fichiers Compose ;
@@ -20,6 +20,7 @@ Les images produites sont :
 - `ghcr.io/arnaudfernandez/racebets/backend:prod-<sha-complet>` depuis `main` ;
 - `ghcr.io/arnaudfernandez/racebets/frontend:prod-<sha-complet>` depuis `main` ;
 - les equivalents `staging-<sha-complet>` depuis `staging` ;
+- les equivalents `olifan-<sha-complet>` et l'alias mobile `olifan` depuis `olifan-group` ;
 - des alias mobiles `prod` et `staging`, pratiques pour l'observation mais a ne pas utiliser pour un deploiement
   reproductible.
 
@@ -108,15 +109,27 @@ defaut est `https://olifan.pixsom.fr`. La destination peut ainsi changer sans re
 Pour changer la destination, modifier uniquement `OLIFAN_REDIRECT_URL` dans Dokploy puis redeployer le Compose. Ne
 jamais changer l'URL encodee dans le QR deja imprime.
 
-Pour la staging, desactiver le declenchement Dokploy `On Push`. Le workflow GitHub appelle l'API Dokploy seulement
-apres la publication reussie des deux images, ce qui evite de redeployer les anciens tags pendant que la CI construit
-encore les nouveaux. Creer dans GitHub un environnement nomme `staging`, puis y definir :
+Pour Olifan, configurer une seule fois les images suivantes dans l'environnement du Compose Dokploy :
+
+```dotenv
+BACKEND_IMAGE=ghcr.io/arnaudfernandez/racebets/backend:olifan
+FRONTEND_IMAGE=ghcr.io/arnaudfernandez/racebets/frontend:olifan
+```
+
+Le fichier Compose impose `pull_policy: always`. Chaque push sur `olifan-group` publie d'abord les deux alias
+`olifan`, puis appelle Dokploy : le deploiement ne peut donc pas commencer avec une seule des deux nouvelles images.
+Les tags immuables `olifan-<sha-complet>` restent disponibles pour un retour arriere.
+
+Desactiver le declenchement Dokploy `On Push` pour eviter un deploiement concurrent avant la fin des builds. Creer
+dans GitHub un environnement nomme `olifan`, puis y definir :
 
 - variable `DOKPLOY_URL` : URL HTTPS de l'instance Dokploy, sans chemin d'API ;
-- variable `DOKPLOY_STAGING_COMPOSE_ID` : identifiant du Compose staging ;
+- variable `DOKPLOY_OLIFAN_COMPOSE_ID` : identifiant du Compose Olifan ;
 - secret `DOKPLOY_API_TOKEN` : token Dokploy dedie a la CI.
 
-Le job appelle `POST /api/compose.deploy`. Ne jamais exposer le token dans une variable non secrete ou dans le depot.
+Le job appelle `POST /api/compose.deploy` apres les tests, scans et publications. Il emet un avertissement et ignore
+le deploiement tant que cette configuration est incomplete. Ne jamais exposer le token dans une variable non secrete
+ou dans le depot.
 
 Les conteneurs applicatifs s'executent sans privileges, avec un systeme de fichiers en lecture seule, toutes les
 capabilities Linux supprimees, un `/tmp` borne, des healthchecks et une rotation des journaux.

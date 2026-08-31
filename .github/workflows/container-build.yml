@@ -198,6 +198,8 @@ jobs:
             channel="prod"
           elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
             channel="staging"
+          elif [[ "${GITHUB_REF_NAME}" == "olifan-group" ]]; then
+            channel="olifan"
           else
             channel="manual"
           fi
@@ -248,3 +250,47 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
+
+  deploy-olifan:
+    name: Deploy Olifan to Dokploy
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'push' && github.ref_name == 'olifan-group'
+    timeout-minutes: 5
+    environment: olifan
+    permissions:
+      contents: read
+    env:
+      DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+      DOKPLOY_COMPOSE_ID: ${{ vars.DOKPLOY_OLIFAN_COMPOSE_ID }}
+      DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+    steps:
+      - name: Check Dokploy configuration
+        id: dokploy
+        shell: bash
+        run: |
+          if [[ -z "${DOKPLOY_URL}" || -z "${DOKPLOY_COMPOSE_ID}" || -z "${DOKPLOY_API_TOKEN}" ]]; then
+            echo "::warning::Olifan deployment skipped: configure DOKPLOY_URL, DOKPLOY_OLIFAN_COMPOSE_ID and DOKPLOY_API_TOKEN in the olifan environment."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Dokploy deployment
+        if: steps.dokploy.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          payload="$(jq -nc \
+            --arg composeId "${DOKPLOY_COMPOSE_ID}" \
+            --arg title "Olifan ${GITHUB_SHA}" \
+            '{composeId: $composeId, title: $title}')"
+
+          curl --fail-with-body --silent --show-error \
+            --connect-timeout 15 \
+            --max-time 60 \
+            --request POST \
+            --header "accept: application/json" \
+            --header "content-type: application/json" \
+            --header "x-api-key: ${DOKPLOY_API_TOKEN}" \
+            --data "${payload}" \
+            "${DOKPLOY_URL%/}/api/compose.deploy"
