@@ -120,7 +120,8 @@ describe('LoginPageComponent', () => {
       appName: 'Grand Prix',
       imageUrl: '/brand.png',
       loginTitle: 'Vibrez ensemble',
-      loginSubtitle: 'Une expérience en direct.'
+      loginSubtitle: 'Une expérience en direct.',
+      theme: 'DEFAULT'
     });
     const fixture = TestBed.createComponent(LoginPageComponent);
     fixture.detectChanges();

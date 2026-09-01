@@ -40,8 +40,9 @@ public class AppBrandingController {
     public AppBrandingResponse update(@RequestParam("appName") String appName,
                                       @RequestParam("loginTitle") String loginTitle,
                                       @RequestParam("loginSubtitle") String loginSubtitle,
+                                      @RequestParam("theme") AppBrandingTheme theme,
                                       @RequestParam(value = "image", required = false) MultipartFile image) {
-        return service.update(appName, loginTitle, loginSubtitle, image);
+        return service.update(appName, loginTitle, loginSubtitle, theme, image);
     }
 
     private ResponseEntity<byte[]> imageResponse(AppBrandingImage image) {

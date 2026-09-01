@@ -1,104 +1,348 @@
 <main class="quiz-shell" [class.is-playing]="snapshot() !== null">
-  @if (error(); as message) { <p class="message error sync-message" role="alert">{{ message }}</p> }
+  @if (error(); as message) {
+    <p class="message error sync-message" role="alert">{{ message }}</p>
+  }
 
   @if (snapshot(); as session) {
-    <header class="live-header">
-      <div class="live-title"><span class="live-dot" aria-hidden="true"></span><div><small>QUIZ LIVE</small><strong>{{ session.title }}</strong></div></div>
-      <div class="live-meta"><span>{{ session.participantCount }} joueur{{ session.participantCount > 1 ? 's' : '' }}</span><button type="button" (click)="backToSessions()">Quitter</button></div>
-    </header>
+    <p class="visually-hidden" aria-live="polite">{{ phaseLabel(session.phase) }}</p>
 
-    @if (!session.joined) {
+    @if (session.phase !== 'SCOREBOARD') {
+      <header class="live-header">
+        <div class="live-title">
+          <span class="live-dot" aria-hidden="true"></span>
+          <strong>{{ session.title }}</strong>
+        </div>
+        <div class="live-meta">
+          <span
+            >{{ session.participantCount }} joueur{{
+              session.participantCount > 1 ? 's' : ''
+            }}</span
+          >
+          <button
+            type="button"
+            aria-label="Quitter le quiz et revenir aux sessions"
+            (click)="backToSessions()"
+          >
+            Quitter
+          </button>
+        </div>
+      </header>
+    }
+
+    @if (!session.joined && session.phase !== 'SCOREBOARD') {
       <section class="welcome-state">
-        <div class="welcome-mark">?</div><span class="eyebrow">PRÊT À JOUER ?</span><h1>{{ session.title }}</h1><p>Rejoignez la partie, répondez avant la fin du chrono et suivez votre classement en direct.</p>
-        <div class="welcome-facts"><span><strong>{{ session.questionCount }}</strong> questions</span><span><strong>{{ session.participantCount }}</strong> participants</span></div>
-        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="join()">{{ loading() ? 'Connexion…' : 'Rejoindre le quiz' }}</button>
+        <h1>{{ session.title }}</h1>
+        <div class="welcome-facts">
+          <span
+            ><strong>{{ session.questionCount }}</strong> questions</span
+          >
+          <span
+            ><strong>{{ session.participantCount }}</strong> participants</span
+          >
+        </div>
+        <button tuiButton type="button" size="l" [disabled]="loading()" (click)="join()">
+          {{ loading() ? 'Connexion…' : 'Rejoindre le quiz' }}
+        </button>
       </section>
     } @else if (session.phase === 'OPENING') {
       <section class="waiting-state">
-        <div class="waiting-pulse"><span></span></div><span class="eyebrow">VOUS ÊTES INSCRIT</span><h1>Le quiz va commencer</h1><p>Gardez cet écran ouvert. La première question s’affichera automatiquement.</p>
-        <div class="player-count"><strong>{{ session.participantCount }}</strong><span>participant{{ session.participantCount > 1 ? 's' : '' }} prêt{{ session.participantCount > 1 ? 's' : '' }}</span></div>
+        <div class="waiting-orbit" aria-hidden="true"><span></span></div>
+        <h1>Le quiz va commencer</h1>
+        <div class="player-count">
+          <span>Vous êtes prêts ?</span>
+        </div>
+      </section>
+    } @else if (session.phase === 'SCOREBOARD') {
+      <section class="quiz-scoreboard-stage" aria-labelledby="scoreboard-title">
+        <div class="scoreboard-inner">
+          <header class="scoreboard-topline">
+            <div class="scoreboard-round">
+              <span
+                >Question {{ session.currentQuestionIndex + 1 }} / {{ session.questionCount }}</span
+              >
+            </div>
+            <button
+              type="button"
+              aria-label="Quitter le classement et revenir aux sessions"
+              (click)="backToSessions()"
+            >
+              Quitter
+            </button>
+          </header>
+
+          <div class="scoreboard-heading">
+            <div class="scoreboard-emblem" aria-hidden="true"><tui-icon icon="@tui.star" /></div>
+            <div>
+              <h1 #scoreboardHeading id="scoreboard-title" tabindex="-1">Le classement</h1>
+            </div>
+          </div>
+
+          @if (currentPlayerScore(); as playerScore) {
+            <section class="player-summary" aria-label="Votre position">
+              <div class="summary-rank">
+                <span>VOTRE RANG</span>
+                <strong>{{ rankLabel(currentPlayerRank()!) }}</strong>
+              </div>
+              <div class="summary-copy">
+                <strong>{{ playerScore.displayName }}</strong>
+              </div>
+              <div class="summary-score">
+                <strong>{{ playerScore.score }}</strong>
+                <span>point{{ playerScore.score > 1 ? 's' : '' }}</span>
+              </div>
+            </section>
+          }
+
+          <ol class="leaderboard" aria-label="Scores des joueurs">
+            @for (score of session.scores; track score.userId; let index = $index) {
+              <li
+                [class.is-podium]="index < 3"
+                [class.is-current-player]="score.userId === currentUserId()"
+              >
+                <span class="leader-rank">{{ index + 1 }}</span>
+                <div
+                  class="leader-avatar"
+                  [tuiAvatar]="score.displayName | tuiInitials"
+                  size="m"
+                ></div>
+                <div class="leader-name">
+                  <strong>{{ score.displayName }}</strong>
+                  @if (score.userId === currentUserId()) {
+                    <span>Vous</span>
+                  }
+                </div>
+                <strong class="leader-score"
+                  >{{ score.score }} <small>pt{{ score.score > 1 ? 's' : '' }}</small></strong
+                >
+              </li>
+            } @empty {
+              <li class="empty-score">Le classement apparaîtra après les premières réponses.</li>
+            }
+          </ol>
+
+          <footer class="scoreboard-waiting">
+            <i aria-hidden="true"></i>Préparez-vous pour la question suivante
+          </footer>
+        </div>
+      </section>
+    } @else if (session.phase === 'QUESTION_LOCKED') {
+      <section class="locked-stage">
+        <div class="locked-mark" aria-hidden="true"><tui-icon icon="@tui.lock" /></div>
+        <h1>Réponse enregistrée</h1>
+        @if (selectedAnswer(); as answer) {
+          <div class="locked-choice">
+            <span>Votre réponse</span><strong>{{ answer.text }}</strong>
+          </div>
+        } @else {
+          <div class="locked-choice is-empty"><span>Aucune réponse enregistrée</span></div>
+        }
       </section>
     } @else if (session.currentQuestion; as question) {
-      <section class="game-stage">
-        <header class="question-status">
-          <div><span>Question {{ session.currentQuestionIndex + 1 }}</span><small>sur {{ session.questionCount }}</small></div>
-          <span class="phase-chip" [class.closed]="session.phase !== 'QUESTION_OPEN'">{{ phaseLabel(session.phase) }}</span>
-          @if (remainingSeconds() !== null) {
-            <div class="countdown" [class.urgent]="remainingSeconds()! <= 5" [class.expired]="timeExpired()"><strong>{{ remainingSeconds() }}</strong><small>sec.</small></div>
-          }
-        </header>
-
-        @if (remainingMilliseconds() !== null) { <div class="timer-track" aria-hidden="true"><span [style.width.%]="timerProgress()"></span></div> }
-
-        <div class="question-copy"><h1>{{ question.text }}</h1></div>
-
-        @if (question.questionImageDataUrl && (session.phase === 'QUESTION_OPEN' || session.phase === 'QUESTION_LOCKED')) {
-          <figure class="media-frame"><img [src]="question.questionImageDataUrl" alt="Illustration de la question" /></figure>
-        }
-        @if (question.answerImageDataUrl && (session.phase === 'ANSWER_REVEALED' || session.phase === 'SCOREBOARD')) {
-          <figure class="media-frame answer-media"><img [src]="question.answerImageDataUrl" alt="Illustration de la réponse" /></figure>
-        }
-
-        @if (session.phase === 'QUESTION_OPEN') {
-          <section class="answer-section" aria-labelledby="answer-instruction">
-            <div class="answer-instruction" id="answer-instruction">
-              @if (timeExpired()) { <strong>Temps écoulé</strong><span>Votre dernier choix enregistré est définitif.</span> }
-              @else if (displayedAnswerId() !== null) { <strong>Réponse enregistrée</strong><span>Vous pouvez encore changer jusqu’à la fin du chrono.</span> }
-              @else { <strong>À vous de jouer</strong><span>Sélectionnez une réponse avant la fin du chrono.</span> }
+      @if (session.phase === 'QUESTION_OPEN') {
+        <section class="game-stage">
+          <header class="round-bar">
+            <div class="round-position">
+              <strong
+                >Question {{ session.currentQuestionIndex + 1 }}
+                <small>/ {{ session.questionCount }}</small></strong
+              >
             </div>
+            @if (remainingSeconds() !== null) {
+              <div
+                class="countdown"
+                [class.urgent]="remainingSeconds()! <= 5"
+                [class.expired]="timeExpired()"
+              >
+                <strong>{{ remainingSeconds() }}</strong
+                ><small>SEC.</small>
+              </div>
+            }
+          </header>
+
+          @if (remainingMilliseconds() !== null) {
+            <progress
+              tuiProgressBar
+              class="timer-progress"
+              size="s"
+              [max]="100"
+              [value]="timerProgress()"
+              [attr.aria-label]="'Temps restant : ' + remainingSeconds() + ' secondes'"
+            ></progress>
+          }
+
+          <section class="question-board" [class.has-media]="question.questionImageDataUrl">
+            <div class="question-copy">
+              <h1>{{ question.text }}</h1>
+            </div>
+            @if (question.questionImageDataUrl) {
+              <figure class="question-media">
+                <img [src]="question.questionImageDataUrl" alt="Illustration de la question" />
+              </figure>
+            }
+          </section>
+
+          <section class="answer-section" aria-label="Réponses">
+            @if (timeExpired()) {
+              <div class="answer-instruction" role="status"><strong>Temps écoulé</strong></div>
+            } @else if (displayedAnswerId() !== null) {
+              <div class="answer-instruction" role="status">
+                <strong>Réponse enregistrée</strong>
+              </div>
+            }
+
             <div class="answer-grid">
               @for (answer of question.answers; track answer.id; let index = $index) {
-                <button class="answer-card" type="button" [class.selected]="displayedAnswerId() === answer.id" [disabled]="timeExpired() || answeringId() !== null" (click)="submitAnswer(answer.id)">
-                  <span class="answer-letter">{{ answerLetter(index) }}</span><strong>{{ answer.text }}</strong>
+                <button
+                  class="answer-card"
+                  type="button"
+                  [class.selected]="displayedAnswerId() === answer.id"
+                  [attr.aria-pressed]="displayedAnswerId() === answer.id"
+                  [disabled]="timeExpired() || answeringId() !== null"
+                  (click)="selectAnswer(answer.id)"
+                >
+                  <span class="answer-letter">{{ answerLetter(index) }}</span>
+                  <strong>{{ answer.text }}</strong>
                   <span class="answer-state">
-                    @if (answeringId() === answer.id) { <tui-loader size="s" /> }
-                    @else if (displayedAnswerId() === answer.id) { <span aria-hidden="true">✓</span><small>Mon choix</small> }
+                    @if (answeringId() === answer.id) {
+                      <tui-loader size="s" [inheritColor]="true" />
+                      <span class="visually-hidden">Enregistrement de la réponse</span>
+                    } @else if (displayedAnswerId() === answer.id) {
+                      <tui-icon icon="@tui.check" /><small>Mon choix</small>
+                    }
                   </span>
                 </button>
               }
             </div>
           </section>
-        } @else if (session.phase === 'QUESTION_LOCKED') {
-          <section class="transition-state"><div class="lock-mark">✓</div><div><span class="eyebrow">RÉPONSES VERROUILLÉES</span><h2>Choix enregistré</h2><p>La correction arrive dans un instant…</p></div></section>
-        } @else {
-          <section class="reveal-section">
-            <div class="reveal-heading"><span class="eyebrow">CORRECTION</span><h2>@if (session.selectedAnswerId === session.correctAnswerId) { Bonne réponse ! } @else { Voici la bonne réponse }</h2></div>
-            <div class="answer-grid reveal-grid">
-              @for (answer of question.answers; track answer.id; let index = $index) {
-                <article class="answer-card reveal-card" [class.correct]="isCorrect(answer, session)" [class.wrong-choice]="answer.id === session.selectedAnswerId && !isCorrect(answer, session)">
-                  <span class="answer-letter">{{ answerLetter(index) }}</span><strong>{{ answer.text }}</strong>
-                  <span class="answer-state">@if (isCorrect(answer, session)) { <span aria-hidden="true">✓</span><small>Bonne réponse</small> } @else if (answer.id === session.selectedAnswerId) { <small>Votre choix</small> }</span>
-                </article>
+        </section>
+      } @else if (session.phase === 'ANSWER_REVEALED') {
+        <section
+          class="reveal-stage"
+          [class.is-correct]="answeredCorrectly()"
+          [class.is-unanswered]="session.selectedAnswerId === null"
+        >
+          <header class="reveal-heading">
+            <div class="outcome-mark" aria-hidden="true">
+              <tui-icon [icon]="answeredCorrectly() ? '@tui.check' : '@tui.x'" />
+            </div>
+            <div>
+              @if (answeredCorrectly()) {
+                <h1>Bien joué !</h1>
+              } @else if (session.selectedAnswerId === null) {
+                <h1>Temps écoulé</h1>
+              } @else {
+                <h1>Pas cette fois</h1>
               }
             </div>
-          </section>
-        }
+          </header>
 
-        @if (session.phase === 'SCOREBOARD') {
-          <section class="scoreboard">
-            <header><div><span class="eyebrow">CLASSEMENT LIVE</span><h2>Les meilleurs scores</h2></div><span>{{ session.currentQuestionIndex + 1 }}/{{ session.questionCount }}</span></header>
-            <ol>
-              @for (score of session.scores; track score.userId; let index = $index) {
-                <li [class.podium]="index < 3"><span class="rank">{{ index + 1 }}</span><strong>{{ score.displayName }}</strong><span class="score">{{ score.score }} pt{{ score.score > 1 ? 's' : '' }}</span></li>
-              } @empty { <li class="empty-score">Le classement apparaîtra après les premières réponses.</li> }
-            </ol>
-          </section>
-        }
-      </section>
+          <div class="reveal-content" [class.has-media]="question.answerImageDataUrl">
+            @if (question.answerImageDataUrl) {
+              <figure class="answer-media">
+                <img [src]="question.answerImageDataUrl" alt="Illustration de la réponse" />
+              </figure>
+            }
+            <div class="correction-panel">
+              <span class="correction-label">BONNE RÉPONSE</span>
+              @if (correctAnswer(); as answer) {
+                <div class="correct-answer">
+                  <span>{{ answerLetter(correctAnswerIndex()) }}</span>
+                  <strong>{{ answer.text }}</strong>
+                  <tui-icon icon="@tui.check" aria-hidden="true" />
+                </div>
+              }
+              @if (selectedAnswer(); as answer) {
+                @if (!answeredCorrectly()) {
+                  <div class="your-answer">
+                    <span>Votre réponse</span>
+                    <strong>{{ answerLetter(selectedAnswerIndex()) }}. {{ answer.text }}</strong>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </section>
+      }
     }
   } @else {
-    <header class="home-hero"><h1>Quiz</h1></header>
+    <header class="home-hero">
+      <h1>Quiz</h1>
+    </header>
 
     <section class="sessions-grid" aria-label="Sessions disponibles">
       @for (session of sessions(); track session.id) {
         <article class="session-card">
-          <div class="session-top"><span class="session-live"><i></i> EN DIRECT</span><span>{{ session.participantCount }} joueur{{ session.participantCount > 1 ? 's' : '' }}</span></div>
-          <div><span class="phase-label">{{ phaseLabel(session.phase) }}</span><h2>{{ session.title }}</h2><p>{{ session.questionCount }} questions pour tester vos connaissances.</p></div>
-          <button tuiButton type="button" size="l" [disabled]="loading()" (click)="selectSession(session)">Entrer dans le quiz →</button>
+          <div class="session-top">
+            <span class="session-live"><i></i> EN DIRECT</span>
+            <span
+              >{{ session.participantCount }} joueur{{
+                session.participantCount > 1 ? 's' : ''
+              }}</span
+            >
+          </div>
+          <div>
+            <span class="phase-label">{{ phaseLabel(session.phase) }}</span>
+            <h2>{{ session.title }}</h2>
+            <p>{{ session.questionCount }} questions</p>
+          </div>
+          <button
+            tuiButton
+            type="button"
+            size="l"
+            [disabled]="loading()"
+            (click)="selectSession(session)"
+          >
+            Entrer dans le quiz
+          </button>
         </article>
       } @empty {
-        <div class="empty-session"><div class="empty-icon">?</div><h2>Le prochain quiz arrive bientôt</h2><p>Cette page se met à jour automatiquement. Vous n’avez rien à faire.</p><span><i></i> En attente d’une session</span></div>
+        <div class="empty-session">
+          <div class="empty-icon">?</div>
+          <h2>Le prochain quiz arrive bientôt</h2>
+          <span><i></i> En attente d’une session</span>
+        </div>
       }
     </section>
   }
 </main>
+
+<ng-template
+  [tuiDialog]="answerChangeCandidate() !== null"
+  (tuiDialogChange)="answerChangeDialogOpenChange($event)"
+  [tuiDialogOptions]="{ label: 'Changer de réponse ?', size: 's' }"
+>
+  @if (selectedAnswer(); as currentAnswer) {
+    @if (answerChangeCandidate(); as candidate) {
+      <section class="answer-change-dialog">
+        <p>Votre réponse actuelle sera remplacée par ce nouveau choix.</p>
+
+        <div class="answer-change-comparison">
+          <div class="answer-change-option">
+            <span>Choix actuel : </span>
+            <strong> {{ currentAnswer.text }}</strong>
+          </div>
+          <div class="answer-change-option is-new">
+            <span>Nouveau choix : </span>
+            <strong>{{ candidate.text }}</strong>
+          </div>
+        </div>
+
+        <br/>
+
+        <div class="answer-change-actions">
+          <button
+            tuiButton
+            type="button"
+            [disabled]="answeringId() !== null"
+            (click)="confirmAnswerChange()"
+          >
+            Confirmer le changement
+          </button>
+          <button tuiButton type="button" appearance="secondary" (click)="cancelAnswerChange()">
+            Garder ma réponse
+          </button>
+        </div>
+      </section>
+    }
+  }
+</ng-template>

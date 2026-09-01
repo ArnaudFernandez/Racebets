@@ -48,31 +48,33 @@
       <div class="loading-state"><tui-loader size="m" /><span>Chargement de vos quiz…</span></div>
     } @else {
       <div class="table-wrap">
-        <table tuiTable size="m" [columns]="columns">
+        <table tuiTable size="m" class="quiz-table">
           <thead>
-            <tr><th>Titre</th><th>Questions</th><th>État</th><th>Actions</th></tr>
+            <tr><th tuiTh>Titre</th><th tuiTh>Questions</th><th tuiTh>État</th><th tuiTh>Actions</th></tr>
           </thead>
-          <tbody>
+          <tbody tuiTbody>
             @for (quiz of quizSets(); track quiz.id) {
               <tr>
-                <td data-label="Titre"><div class="quiz-title"><strong>{{ quiz.title }}</strong><small>Quiz #{{ quiz.id }}</small></div></td>
-                <td data-label="Questions"><span class="question-count">{{ quiz.questionCount }}</span> question{{ quiz.questionCount > 1 ? 's' : '' }}</td>
-                <td data-label="État">
+                <td tuiTd data-label="Titre"><div class="quiz-title"><strong>{{ quiz.title }}</strong><small>Quiz #{{ quiz.id }}</small></div></td>
+                <td tuiTd data-label="Questions"><span class="question-count">{{ quiz.questionCount }}</span> question{{ quiz.questionCount > 1 ? 's' : '' }}</td>
+                <td tuiTd data-label="État">
                   @if (isLiveQuiz(quiz.id)) { <span tuiBadge size="s" appearance="positive">En direct</span> }
                   @else { <span tuiBadge size="s" appearance="neutral">Prêt</span> }
                 </td>
-                <td class="row-actions" data-label="Actions">
-                  @if (isLiveQuiz(quiz.id)) {
-                    <button tuiButton type="button" size="xs" (click)="controlSession(activeSession()!.id)">Piloter</button>
-                  } @else {
-                    <button tuiButton type="button" size="xs" [disabled]="activeSession() !== null || loading()" (click)="launch(quiz.id)">Lancer</button>
-                  }
-                  <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="isLiveQuiz(quiz.id)" (click)="editQuiz(quiz)">Modifier</button>
-                  <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="isLiveQuiz(quiz.id)" (click)="requestDelete(quiz)">Supprimer</button>
+                <td tuiTd data-label="Actions">
+                  <div class="row-actions">
+                    @if (isLiveQuiz(quiz.id)) {
+                      <button tuiButton type="button" size="xs" (click)="controlSession(activeSession()!.id)">Piloter</button>
+                    } @else {
+                      <button tuiButton type="button" size="xs" [disabled]="activeSession() !== null || loading()" (click)="launch(quiz.id)">Lancer</button>
+                    }
+                    <button tuiButton type="button" size="xs" appearance="secondary" [disabled]="isLiveQuiz(quiz.id)" (click)="editQuiz(quiz)">Modifier</button>
+                    <button tuiButton type="button" size="xs" appearance="secondary-destructive" [disabled]="isLiveQuiz(quiz.id)" (click)="requestDelete(quiz)">Supprimer</button>
+                  </div>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="4"><div class="empty-state"><strong>Créez votre premier questionnaire</strong><p>Préparez les questions, les visuels, le chrono et les bonnes réponses depuis un écran dédié.</p><button tuiButton type="button" size="m" (click)="createQuiz()">Nouveau questionnaire</button></div></td></tr>
+              <tr><td tuiTd colspan="4"><div class="empty-state"><strong>Créez votre premier questionnaire</strong><p>Préparez les questions, les visuels, le chrono et les bonnes réponses depuis un écran dédié.</p><button tuiButton type="button" size="m" (click)="createQuiz()">Nouveau questionnaire</button></div></td></tr>
             }
           </tbody>
         </table>

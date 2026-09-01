@@ -24,7 +24,6 @@ export class AdminQuizPanelComponent {
   private readonly quizApi = inject(QuizApiService);
   private readonly router = inject(Router);
 
-  readonly columns = ['title', 'questions', 'status', 'actions'];
   readonly quizSets = signal<readonly QuizSetListResponse[]>([]);
   readonly liveSessions = signal<readonly QuizSessionSummaryResponse[]>([]);
   readonly activeSession = computed(() => this.liveSessions()[0] ?? null);

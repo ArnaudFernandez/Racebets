@@ -79,28 +79,28 @@
       </header>
 
       <div class="table-wrap">
-        <table>
+        <table tuiTable size="m">
           <thead>
-            <tr><th>Nom</th><th>Email</th><th>Roles</th><th>Etat</th><th>Actions</th></tr>
+            <tr><th tuiTh>Nom</th><th tuiTh>Email</th><th tuiTh>Roles</th><th tuiTh>Etat</th><th tuiTh>Actions</th></tr>
           </thead>
-          <tbody>
+          <tbody tuiTbody>
             @for (user of users(); track user.id) {
               <tr>
-                <td data-label="Nom">{{ user.name }} {{ user.surname }}</td>
-                <td data-label="Email">{{ user.email }}</td>
-                <td data-label="Roles">
+                <td tuiTd data-label="Nom">{{ user.name }} {{ user.surname }}</td>
+                <td tuiTd data-label="Email">{{ user.email }}</td>
+                <td tuiTd data-label="Roles">
                   @for (role of user.roles; track role) {
                     <span tuiBadge size="s" appearance="neutral" class="role-badge">{{ role }}</span>
                   }
                 </td>
-                <td data-label="Etat"><span tuiBadge size="s" [appearance]="user.present ? 'positive' : 'neutral'">{{ user.present ? 'Present' : 'Absent' }}</span></td>
-                <td class="row-actions" data-label="Actions">
+                <td tuiTd data-label="Etat"><span tuiBadge size="s" [appearance]="user.present ? 'positive' : 'neutral'">{{ user.present ? 'Present' : 'Absent' }}</span></td>
+                <td tuiTd class="row-actions" data-label="Actions">
                   <button tuiButton type="button" size="xs" appearance="secondary" (click)="edit(user)">Editer</button>
                   <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestDelete(user)">Supprimer</button>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="5" class="empty">Aucun utilisateur.</td></tr>
+              <tr><td tuiTd colspan="5" class="empty">Aucun utilisateur.</td></tr>
             }
           </tbody>
         </table>

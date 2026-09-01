@@ -1,23 +1,46 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  OnDestroy,
+  OnInit,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+  viewChild
+} from '@angular/core';
 import { Router } from '@angular/router';
-import { TuiButton, TuiLoader } from '@taiga-ui/core';
+import { TuiButton, TuiDialog, TuiIcon, TuiLoader } from '@taiga-ui/core';
+import { TuiAvatar, TuiInitialsPipe, TuiProgress } from '@taiga-ui/kit';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
-import { QuizAnswerResponse, QuizSessionPhase, QuizSessionSnapshotResponse, QuizSessionSummaryResponse } from '../models/quiz-api.model';
+import {
+  QuizAnswerResponse,
+  QuizSessionPhase,
+  QuizSessionSnapshotResponse,
+  QuizSessionSummaryResponse
+} from '../models/quiz-api.model';
 import { QuizApiService } from '../services/quiz-api.service';
 
 @Component({
   selector: 'app-quiz-play-page',
-  imports: [TuiButton, TuiLoader],
+  imports: [TuiAvatar, TuiButton, TuiDialog, TuiIcon, TuiInitialsPipe, TuiLoader, TuiProgress],
   templateUrl: './quiz-play-page.component.html',
   styleUrl: './quiz-play-page.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class QuizPlayPageComponent implements OnInit, OnDestroy {
   private readonly quizApi = inject(QuizApiService);
+  private readonly auth = inject(AuthService);
   private readonly features = inject(AppFeaturesService);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly scoreboardHeading =
+    viewChild<ElementRef<HTMLHeadingElement>>('scoreboardHeading');
   private refreshTimer: number | null = null;
   private clockTimer: number | null = null;
   private suppressedSessionId: number | null = null;
@@ -28,6 +51,7 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly answeringId = signal<number | null>(null);
   readonly optimisticAnswerId = signal<number | null>(null);
+  readonly answerChangeCandidate = signal<QuizAnswerResponse | null>(null);
   readonly error = signal<string | null>(null);
   readonly now = signal(Date.now());
   readonly serverClockOffset = signal(0);
@@ -37,7 +61,8 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
     if (snapshot?.phase !== 'QUESTION_OPEN') return null;
     const explicitDeadline = Date.parse(snapshot.questionEndsAt ?? '');
     const phaseStartedAt = Date.parse(snapshot.phaseStartedAt ?? '');
-    const fallbackDeadline = phaseStartedAt + (snapshot.currentQuestion?.durationSeconds ?? 0) * 1000;
+    const fallbackDeadline =
+      phaseStartedAt + (snapshot.currentQuestion?.durationSeconds ?? 0) * 1000;
     const deadline = Number.isFinite(explicitDeadline) ? explicitDeadline : fallbackDeadline;
     if (!Number.isFinite(deadline)) return null;
     const serverNow = this.now() + this.serverClockOffset();
@@ -51,10 +76,63 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
     const remaining = this.remainingMilliseconds();
     const duration = this.snapshot()?.currentQuestion?.durationSeconds;
     if (remaining === null || duration === undefined) return 0;
-    return Math.max(0, Math.min(100, remaining / (duration * 1000) * 100));
+    return Math.max(0, Math.min(100, (remaining / (duration * 1000)) * 100));
   });
   readonly timeExpired = computed(() => this.remainingMilliseconds() === 0);
-  readonly displayedAnswerId = computed(() => this.optimisticAnswerId() ?? this.snapshot()?.selectedAnswerId ?? null);
+  readonly displayedAnswerId = computed(
+    () => this.optimisticAnswerId() ?? this.snapshot()?.selectedAnswerId ?? null
+  );
+  readonly currentUserId = computed(() => this.auth.user()?.id ?? null);
+  readonly correctAnswer = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      snapshot?.currentQuestion?.answers.find((answer) => answer.id === snapshot.correctAnswerId) ??
+      null
+    );
+  });
+  readonly selectedAnswer = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      snapshot?.currentQuestion?.answers.find(
+        (answer) => answer.id === snapshot.selectedAnswerId
+      ) ?? null
+    );
+  });
+  readonly correctAnswerIndex = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      snapshot?.currentQuestion?.answers.findIndex(
+        (answer) => answer.id === snapshot.correctAnswerId
+      ) ?? -1
+    );
+  });
+  readonly selectedAnswerIndex = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      snapshot?.currentQuestion?.answers.findIndex(
+        (answer) => answer.id === snapshot.selectedAnswerId
+      ) ?? -1
+    );
+  });
+  readonly answeredCorrectly = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      snapshot?.selectedAnswerId !== null &&
+      snapshot?.selectedAnswerId === snapshot?.correctAnswerId
+    );
+  });
+  readonly currentPlayerScore = computed(() => {
+    const userId = this.currentUserId();
+    return userId === null
+      ? null
+      : (this.snapshot()?.scores.find((score) => score.userId === userId) ?? null);
+  });
+  readonly currentPlayerRank = computed(() => {
+    const userId = this.currentUserId();
+    if (userId === null) return null;
+    const index = this.snapshot()?.scores.findIndex((score) => score.userId === userId) ?? -1;
+    return index < 0 ? null : index + 1;
+  });
 
   ngOnInit(): void {
     void this.refresh();
@@ -69,23 +147,63 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
 
   protected async selectSession(session: QuizSessionSummaryResponse): Promise<void> {
     this.suppressedSessionId = null;
-    await this.runAction(async () => this.applySnapshot(await this.quizApi.findSession(session.id)));
+    await this.runAction(async () =>
+      this.applySnapshot(await this.quizApi.findSession(session.id))
+    );
   }
 
   protected async join(): Promise<void> {
     const snapshot = this.snapshot();
     if (snapshot === null) return;
-    await this.runAction(async () => this.applySnapshot(await this.quizApi.joinSession(snapshot.id)));
+    await this.runAction(async () =>
+      this.applySnapshot(await this.quizApi.joinSession(snapshot.id))
+    );
   }
 
-  protected async submitAnswer(answerId: number): Promise<void> {
+  protected selectAnswer(answerId: number): void {
     const snapshot = this.snapshot();
     if (
-      snapshot?.phase !== 'QUESTION_OPEN'
-      || this.timeExpired()
-      || this.answeringId() !== null
-      || this.displayedAnswerId() === answerId
-    ) return;
+      snapshot?.phase !== 'QUESTION_OPEN' ||
+      this.timeExpired() ||
+      this.answeringId() !== null ||
+      this.displayedAnswerId() === answerId
+    )
+      return;
+
+    const answer = snapshot.currentQuestion?.answers.find((item) => item.id === answerId);
+    if (answer === undefined) return;
+
+    if (this.displayedAnswerId() !== null) {
+      this.answerChangeCandidate.set(answer);
+      return;
+    }
+
+    void this.submitAnswer(answerId);
+  }
+
+  protected cancelAnswerChange(): void {
+    this.answerChangeCandidate.set(null);
+  }
+
+  protected answerChangeDialogOpenChange(open: boolean): void {
+    if (!open) this.cancelAnswerChange();
+  }
+
+  protected confirmAnswerChange(): void {
+    const candidate = this.answerChangeCandidate();
+    this.answerChangeCandidate.set(null);
+    if (candidate !== null) void this.submitAnswer(candidate.id);
+  }
+
+  private async submitAnswer(answerId: number): Promise<void> {
+    const snapshot = this.snapshot();
+    if (
+      snapshot?.phase !== 'QUESTION_OPEN' ||
+      this.timeExpired() ||
+      this.answeringId() !== null ||
+      this.displayedAnswerId() === answerId
+    )
+      return;
 
     this.optimisticAnswerId.set(answerId);
     this.answeringId.set(answerId);
@@ -105,25 +223,26 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
     this.suppressedSessionId = this.snapshot()?.id ?? null;
     this.snapshot.set(null);
     this.optimisticAnswerId.set(null);
+    this.answerChangeCandidate.set(null);
   }
 
   protected phaseLabel(phase: QuizSessionPhase): string {
-    return ({
+    return {
       OPENING: 'Salle ouverte',
       QUESTION_OPEN: 'Question en cours',
       QUESTION_LOCKED: 'Réponses terminées',
       ANSWER_REVEALED: 'Correction',
       SCOREBOARD: 'Classement',
       FINISHED: 'Terminé'
-    })[phase];
+    }[phase];
   }
 
   protected answerLetter(index: number): string {
     return ['A', 'B', 'C', 'D'][index] ?? String(index + 1);
   }
 
-  protected isCorrect(answer: QuizAnswerResponse, session: QuizSessionSnapshotResponse): boolean {
-    return answer.id === session.correctAnswerId;
+  protected rankLabel(rank: number): string {
+    return rank === 1 ? '1er' : `${rank}e`;
   }
 
   private async refresh(): Promise<void> {
@@ -131,7 +250,9 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
       const activeSnapshot = this.snapshot();
       const [sessions, refreshedSnapshot] = await Promise.all([
         this.quizApi.findLiveSessions(),
-        activeSnapshot === null ? Promise.resolve(null) : this.quizApi.findSession(activeSnapshot.id)
+        activeSnapshot === null
+          ? Promise.resolve(null)
+          : this.quizApi.findSession(activeSnapshot.id)
       ]);
       this.sessions.set(sessions);
       if (refreshedSnapshot !== null) {
@@ -146,16 +267,23 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
   }
 
   private applySnapshot(snapshot: QuizSessionSnapshotResponse): void {
+    const previousPhase = this.snapshot()?.phase;
     const serverTime = Date.parse(snapshot.serverTime ?? '');
     this.serverClockOffset.set(Number.isFinite(serverTime) ? serverTime - Date.now() : 0);
     this.now.set(Date.now());
     this.optimisticAnswerId.set(null);
+    if (snapshot.phase !== 'QUESTION_OPEN') this.answerChangeCandidate.set(null);
     if (snapshot.phase === 'FINISHED') {
       void this.leaveCompletedSession();
       return;
     }
     this.completionHandled = false;
     this.snapshot.set(snapshot);
+    if (snapshot.phase === 'SCOREBOARD' && previousPhase !== 'SCOREBOARD') {
+      afterNextRender(() => this.scoreboardHeading()?.nativeElement.focus(), {
+        injector: this.injector
+      });
+    }
   }
 
   private async leaveCompletedSession(): Promise<void> {

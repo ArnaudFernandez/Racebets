@@ -37,34 +37,54 @@ class AppBrandingControllerTest {
     @Test
     void currentBrandingIsPublic() throws Exception {
         when(service.current()).thenReturn(new AppBrandingResponse(
-                "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct."));
+                "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct.",
+                AppBrandingTheme.OLIFAN_GROUP));
 
         mockMvc.perform(get("/api/app/branding"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appName").value("Hippodrome"))
                 .andExpect(jsonPath("$.loginTitle").value("Vibrez ensemble"))
                 .andExpect(jsonPath("$.loginSubtitle").value("Une expérience en direct."))
+                .andExpect(jsonPath("$.theme").value("OLIFAN_GROUP"))
                 .andExpect(jsonPath("$.imageUrl").value("/api/app/branding/image?v=1"));
     }
 
     @Test
     void updateAcceptsMultipartBranding() throws Exception {
         MockMultipartFile image = new MockMultipartFile("image", "brand.png", "image/png", new byte[]{1});
-        when(service.update(eq("Hippodrome"), eq("Vibrez ensemble"), eq("Une expérience en direct."), any()))
+        when(service.update(eq("Hippodrome"), eq("Vibrez ensemble"), eq("Une expérience en direct."),
+                eq(AppBrandingTheme.OLIFAN_GROUP), any()))
                 .thenReturn(new AppBrandingResponse(
-                        "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct."));
+                        "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct.",
+                        AppBrandingTheme.OLIFAN_GROUP));
 
         mockMvc.perform(multipart("/api/admin/app/branding")
                         .file(image)
                         .param("appName", "Hippodrome")
                         .param("loginTitle", "Vibrez ensemble")
                         .param("loginSubtitle", "Une expérience en direct.")
+                        .param("theme", "OLIFAN_GROUP")
                         .with(request -> {
                             request.setMethod("PUT");
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.appName").value("Hippodrome"));
+                .andExpect(jsonPath("$.appName").value("Hippodrome"))
+                .andExpect(jsonPath("$.theme").value("OLIFAN_GROUP"));
+    }
+
+    @Test
+    void updateRejectsUnknownTheme() throws Exception {
+        mockMvc.perform(multipart("/api/admin/app/branding")
+                        .param("appName", "Hippodrome")
+                        .param("loginTitle", "Vibrez ensemble")
+                        .param("loginSubtitle", "Une expérience en direct.")
+                        .param("theme", "olifan")
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

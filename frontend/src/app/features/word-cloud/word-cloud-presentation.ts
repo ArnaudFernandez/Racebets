@@ -7,8 +7,8 @@ export interface WordCloudWordPresentation extends WordCloudWord {
 }
 
 const COLORS = [
-  'var(--rb-turf-deep)',
-  'var(--rb-turf)',
+  'var(--rb-brand-deep)',
+  'var(--rb-brand)',
   'var(--rb-ink)',
   'var(--rb-muted)',
   'color-mix(in srgb, var(--rb-coral) 68%, var(--rb-ink))',

@@ -2,20 +2,20 @@
 .control-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; width: min(88rem, 100%); margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
 .control-shell > * { min-inline-size: 0; }
 .back-link { width: fit-content; color: var(--rb-muted); font-size: .85rem; font-weight: 650; text-decoration: none; }
-.back-link:hover { color: var(--rb-turf-deep); }
+.back-link:hover { color: var(--rb-brand-deep); }
 .state-dot { inline-size: .5rem; block-size: .5rem; border-radius: 50%; background: var(--rb-amber); }
-.state-dot.live { background: #70db9a; box-shadow: 0 0 0 .25rem rgba(112, 219, 154, .15); }
+.state-dot.live { background: var(--rb-live-light); box-shadow: 0 0 0 .25rem color-mix(in srgb, var(--rb-live-light) 15%, transparent); }
 .workflow { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: .8rem; border: 1px solid var(--rb-line); border-radius: 1rem; background: var(--rb-paper-strong); list-style: none; }
 .workflow li { position: relative; display: grid; gap: .3rem; justify-items: center; color: var(--rb-subtle); text-align: center; }
 .workflow li:not(:last-child)::after { position: absolute; inset-block-start: .85rem; inset-inline: calc(50% + 1.1rem) calc(-50% + 1.1rem); block-size: 1px; background: var(--rb-line); content: ''; }
 .workflow li > span { z-index: 1; display: grid; inline-size: 1.7rem; block-size: 1.7rem; place-items: center; border-radius: 50%; background: var(--rb-panel); font-size: .75rem; font-weight: 700; }
 .workflow li small { font-size: .7rem; }
-.workflow li.done > span, .workflow li.current > span { background: var(--rb-turf); color: white; }
-.workflow li.done:not(:last-child)::after { background: #8fc0a1; }
+.workflow li.done > span, .workflow li.current > span { background: var(--rb-positive); color: white; }
+.workflow li.done:not(:last-child)::after { background: color-mix(in srgb, var(--rb-positive) 55%, var(--rb-line)); }
 .workflow li.current small { color: var(--rb-ink); font-weight: 700; }
-.workflow-advance { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #c8dfd0; border-radius: 1rem; background: var(--rb-turf-soft); }
+.workflow-advance { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid color-mix(in srgb, var(--rb-brand) 24%, var(--rb-line)); border-radius: 1rem; background: var(--rb-brand-soft); }
 .workflow-advance > div { display: grid; gap: .2rem; }
-.next-label { color: var(--rb-turf-deep); font-size: .72rem; font-weight: 700; }
+.next-label { color: var(--rb-brand-deep); font-size: .72rem; font-weight: 700; }
 .workflow-advance strong { font-size: 1rem; }
 .workflow-advance small { color: var(--rb-muted); font-size: .82rem; line-height: 1.4; }
 .reset-advance { border-color: #ead5d2; background: #fff5f3; }

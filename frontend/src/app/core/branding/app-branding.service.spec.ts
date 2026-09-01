@@ -26,19 +26,22 @@ describe('AppBrandingService', () => {
         appName: 'Hippodrome',
         imageUrl: '/api/app/branding/image?v=2',
         loginTitle: 'Vibrez ensemble',
-        loginSubtitle: 'Une expérience en direct.'
+        loginSubtitle: 'Une expérience en direct.',
+        theme: 'OLIFAN_GROUP'
       });
 
     await expectAsync(loading).toBeResolvedTo({
       appName: 'Hippodrome',
       imageUrl: '/api/app/branding/image?v=2',
       loginTitle: 'Vibrez ensemble',
-      loginSubtitle: 'Une expérience en direct.'
+      loginSubtitle: 'Une expérience en direct.',
+      theme: 'OLIFAN_GROUP'
     });
     expect(service.appName()).toBe('Hippodrome');
     expect(service.imageUrl()).toBe('/api/app/branding/image?v=2');
     expect(service.loginTitle()).toBe('Vibrez ensemble');
     expect(service.loginSubtitle()).toBe('Une expérience en direct.');
+    expect(service.theme()).toBe('OLIFAN_GROUP');
   });
 
   it('applies branding updates immediately', () => {
@@ -46,14 +49,27 @@ describe('AppBrandingService', () => {
       appName: 'Grand Prix',
       imageUrl: '/brand.png',
       loginTitle: 'À vos marques',
-      loginSubtitle: 'Participez maintenant.'
+      loginSubtitle: 'Participez maintenant.',
+      theme: 'DEFAULT'
     });
 
     expect(service.settings()).toEqual({
       appName: 'Grand Prix',
       imageUrl: '/brand.png',
       loginTitle: 'À vos marques',
-      loginSubtitle: 'Participez maintenant.'
+      loginSubtitle: 'Participez maintenant.',
+      theme: 'DEFAULT'
     });
+  });
+
+  it('previews a theme without replacing persisted branding', () => {
+    service.previewTheme('OLIFAN_GROUP');
+
+    expect(service.theme()).toBe('OLIFAN_GROUP');
+    expect(service.settings().theme).toBe('DEFAULT');
+
+    service.clearThemePreview();
+
+    expect(service.theme()).toBe('DEFAULT');
   });
 });

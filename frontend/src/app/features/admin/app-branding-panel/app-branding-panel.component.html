@@ -64,6 +64,35 @@
           <small>{{ selectedImage()?.name ?? 'PNG, JPEG ou WebP · 2 Mo maximum' }}</small>
         </label>
 
+        <fieldset class="theme-field">
+          <legend>Couleurs de l’application</legend>
+          <p>Identité visuelle de la navigation et des actions principales.</p>
+          <div class="theme-options">
+            <button
+              type="button"
+              class="theme-option"
+              [class.selected]="selectedTheme() === 'OLIFAN_GROUP'"
+              [attr.aria-pressed]="selectedTheme() === 'OLIFAN_GROUP'"
+              [disabled]="loading()"
+              (click)="selectTheme('OLIFAN_GROUP')"
+            >
+              <span class="theme-swatch is-olifan" aria-hidden="true"></span>
+              <span><strong>Couleur Olifan Group</strong><small>Rouge institutionnel</small></span>
+            </button>
+            <button
+              type="button"
+              class="theme-option"
+              [class.selected]="selectedTheme() === 'DEFAULT'"
+              [attr.aria-pressed]="selectedTheme() === 'DEFAULT'"
+              [disabled]="loading()"
+              (click)="selectTheme('DEFAULT')"
+            >
+              <span class="theme-swatch is-default" aria-hidden="true"></span>
+              <span><strong>Couleur par défaut</strong><small>Vert historique</small></span>
+            </button>
+          </div>
+        </fieldset>
+
         <div class="form-actions">
           <button tuiButton type="submit" [disabled]="loading()">
             {{ loading() ? 'Enregistrement...' : 'Enregistrer le branding' }}

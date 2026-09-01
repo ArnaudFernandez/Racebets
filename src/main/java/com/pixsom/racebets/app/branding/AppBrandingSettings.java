@@ -2,6 +2,8 @@ package com.pixsom.racebets.app.branding;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
@@ -25,6 +27,10 @@ public class AppBrandingSettings {
 
     @Column(name = "login_subtitle", nullable = false, length = 300)
     private String loginSubtitle = "Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme", nullable = false, length = 32)
+    private AppBrandingTheme theme = AppBrandingTheme.DEFAULT;
 
     @Lob
     @Column(name = "image_data")

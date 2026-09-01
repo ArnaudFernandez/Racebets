@@ -48,6 +48,11 @@ export class AppComponent {
     effect(() => {
       this.title.setTitle(this.branding.appName());
       this.updateApplicationIcons(this.branding.imageUrl());
+      const olifanTheme = this.branding.theme() === 'OLIFAN_GROUP';
+      this.document.documentElement.dataset['brandTheme'] = olifanTheme ? 'olifan-group' : 'default';
+      this.document
+        .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+        ?.setAttribute('content', olifanTheme ? '#8d1d22' : '#00552f');
     });
     this.features.startWatching();
     effect(() => {

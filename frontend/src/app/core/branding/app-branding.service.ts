@@ -2,19 +2,21 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { EMPTY, catchError, exhaustMap, firstValueFrom, tap, timeout, timer } from 'rxjs';
 
-import { AppBrandingSettings } from './app-branding.model';
+import { AppBrandingSettings, AppBrandingTheme } from './app-branding.model';
 
 const DEFAULT_BRANDING: AppBrandingSettings = {
   appName: 'Racebets',
   imageUrl: '/logo_le_bouscat.png',
   loginTitle: 'Vivez la course, simplement.',
-  loginSubtitle: 'Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.'
+  loginSubtitle: 'Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.',
+  theme: 'DEFAULT'
 };
 
 @Injectable({ providedIn: 'root' })
 export class AppBrandingService {
   private readonly http = inject(HttpClient);
   private readonly settingsState = signal<AppBrandingSettings>(DEFAULT_BRANDING);
+  private readonly previewThemeState = signal<AppBrandingTheme | null>(null);
   private loadingPromise: Promise<AppBrandingSettings> | null = null;
   private loaded = false;
   private watching = false;
@@ -25,6 +27,7 @@ export class AppBrandingService {
   readonly imageUrl = computed(() => this.settingsState().imageUrl);
   readonly loginTitle = computed(() => this.settingsState().loginTitle);
   readonly loginSubtitle = computed(() => this.settingsState().loginSubtitle);
+  readonly theme = computed(() => this.previewThemeState() ?? this.settingsState().theme);
 
   async load(): Promise<AppBrandingSettings> {
     if (this.loadingPromise !== null) return this.loadingPromise;
@@ -49,7 +52,16 @@ export class AppBrandingService {
   apply(settings: AppBrandingSettings): void {
     this.settingsVersion++;
     this.loaded = true;
+    this.previewThemeState.set(null);
     this.settingsState.set(settings);
+  }
+
+  previewTheme(theme: AppBrandingTheme): void {
+    this.previewThemeState.set(theme);
+  }
+
+  clearThemePreview(): void {
+    this.previewThemeState.set(null);
   }
 
   startWatching(): void {

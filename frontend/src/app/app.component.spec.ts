@@ -92,6 +92,9 @@ describe('AppComponent', () => {
     const favicon = document.createElement('link');
     favicon.rel = 'icon';
     document.head.appendChild(favicon);
+    const themeColor = document.createElement('meta');
+    themeColor.name = 'theme-color';
+    document.head.appendChild(themeColor);
     const fixture = TestBed.createComponent(AppComponent);
     const branding = TestBed.inject(AppBrandingService);
 
@@ -100,12 +103,35 @@ describe('AppComponent', () => {
       appName: 'Grand Prix',
       imageUrl: '/api/app/branding/image?v=3',
       loginTitle: 'Vibrez ensemble',
-      loginSubtitle: 'Une expérience en direct.'
+      loginSubtitle: 'Une expérience en direct.',
+      theme: 'OLIFAN_GROUP'
     });
     fixture.detectChanges();
 
     expect(document.title).toBe('Grand Prix');
     expect(favicon.getAttribute('href')).toBe('/api/app/branding/image?v=3');
+    expect(document.documentElement.dataset['brandTheme']).toBe('olifan-group');
+    expect(themeColor.content).toBe('#8d1d22');
+    const rootStyles = getComputedStyle(document.documentElement);
+    expect(rootStyles.getPropertyValue('--rb-brand').trim()).toBe('#8d1d22');
+    expect(rootStyles.getPropertyValue('--rb-positive').trim()).toBe('#8d1d22');
     favicon.remove();
+    themeColor.remove();
+  });
+
+  it('previews and restores a branding theme immediately', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const branding = TestBed.inject(AppBrandingService);
+    fixture.detectChanges();
+
+    branding.previewTheme('OLIFAN_GROUP');
+    fixture.detectChanges();
+
+    expect(document.documentElement.dataset['brandTheme']).toBe('olifan-group');
+
+    branding.clearThemePreview();
+    fixture.detectChanges();
+
+    expect(document.documentElement.dataset['brandTheme']).toBe('default');
   });
 });

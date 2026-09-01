@@ -36,14 +36,19 @@ public class AppBrandingService {
     }
 
     @Transactional
-    public AppBrandingResponse update(String appName, String loginTitle, String loginSubtitle, MultipartFile image) {
+    public AppBrandingResponse update(String appName, String loginTitle, String loginSubtitle,
+                                      AppBrandingTheme theme, MultipartFile image) {
         AppBrandingSettings settings = repository.findLockedById(SINGLETON_ID).orElseGet(AppBrandingSettings::new);
+        if (theme == null) {
+            throw new BadRequestException("Le thème de l'application est obligatoire.");
+        }
         settings.setAppName(normalizeRequiredText(
                 appName, 120, "Le nom de l'application est obligatoire et limité à 120 caractères."));
         settings.setLoginTitle(normalizeRequiredText(
                 loginTitle, 160, "Le titre de connexion est obligatoire et limité à 160 caractères."));
         settings.setLoginSubtitle(normalizeRequiredText(
                 loginSubtitle, 300, "Le sous-titre de connexion est obligatoire et limité à 300 caractères."));
+        settings.setTheme(theme);
         if (image != null && !image.isEmpty()) {
             applyImage(settings, image);
         }
@@ -86,7 +91,8 @@ public class AppBrandingService {
                 settings.getAppName() == null ? DEFAULT_APP_NAME : settings.getAppName(),
                 imageUrl,
                 settings.getLoginTitle() == null ? DEFAULT_LOGIN_TITLE : settings.getLoginTitle(),
-                settings.getLoginSubtitle() == null ? DEFAULT_LOGIN_SUBTITLE : settings.getLoginSubtitle()
+                settings.getLoginSubtitle() == null ? DEFAULT_LOGIN_SUBTITLE : settings.getLoginSubtitle(),
+                settings.getTheme() == null ? AppBrandingTheme.DEFAULT : settings.getTheme()
         );
     }
 }

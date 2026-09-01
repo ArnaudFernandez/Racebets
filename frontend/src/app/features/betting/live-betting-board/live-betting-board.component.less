@@ -1,18 +1,19 @@
 :host { display: block; }
 .live-shell { display: grid; gap: 1rem; width: min(88rem, 100%); margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
 .state-bet_starting { --race-hero-background: #243c54; }
-.state-betting { --race-hero-background: #0c5632; }
+.state-betting { --race-hero-background: var(--rb-positive-deep); }
 .state-bet_closed { --race-hero-background: #39443e; }
 .state-finished { --race-hero-background: #574522; }
 .pulse { inline-size: .5rem; block-size: .5rem; border-radius: 50%; background: rgba(255,255,255,.45); }
-.pulse.active { background: #70db9a; box-shadow: 0 0 0 .3rem rgba(112,219,154,.14); animation: pulse 1.7s ease-out infinite; }
-.race-guidance { display: grid; gap: .2rem; padding: 1rem; border: 1px solid #c8dfd0; border-radius: 1rem; background: var(--rb-turf-soft); }
-.race-guidance span { color: var(--rb-turf-deep); font-size: .72rem; font-weight: 700; }
+.pulse.active { background: var(--rb-live-light); box-shadow: 0 0 0 .3rem color-mix(in srgb, var(--rb-live-light) 14%, transparent); animation: pulse 1.7s ease-out infinite; }
+.race-guidance { display: grid; gap: .2rem; padding: 1rem; border: 1px solid color-mix(in srgb, var(--rb-brand) 24%, var(--rb-line)); border-radius: 1rem; background: var(--rb-brand-soft); }
+.race-guidance span { color: var(--rb-brand-deep); font-size: .72rem; font-weight: 700; }
 .race-guidance strong { font-size: .9rem; line-height: 1.45; }
 
 .result-banner { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; padding: 1.15rem; border: 1px solid var(--rb-line); border-radius: 1rem; background: white; }
-.result-banner.won { border-color: #aed3bb; background: #f4fbf6; }
-.result-icon { display: grid; inline-size: 2.75rem; block-size: 2.75rem; place-items: center; border-radius: 50%; background: var(--rb-turf-soft); color: var(--rb-turf-deep); font-size: 1.2rem; font-weight: 800; }
+.result-banner.won { border-color: var(--rb-positive-line); background: color-mix(in srgb, var(--rb-positive-soft) 58%, white); }
+.result-icon { display: grid; inline-size: 2.75rem; block-size: 2.75rem; place-items: center; border-radius: 50%; background: var(--rb-panel); color: var(--rb-muted); font-size: 1.2rem; font-weight: 800; }
+.result-banner.won .result-icon { background: var(--rb-positive-soft); color: var(--rb-positive-deep); }
 .result-banner h2, .result-banner p { margin: 0; }
 .result-banner h2 { font-size: 1.2rem; letter-spacing: -.025em; }
 .result-banner p { margin-block-start: .2rem; color: var(--rb-muted); font-size: .9rem; }
@@ -22,20 +23,21 @@
 .market-head h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.04em; }
 .market-head p { margin: .2rem 0 0; color: var(--rb-muted); font-size: .85rem; }
 .market-status { padding: .4rem .65rem; border-radius: 999rem; background: var(--rb-panel); color: var(--rb-muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }
-.market-status.open { background: var(--rb-turf-soft); color: var(--rb-turf-deep); }
+.market-status.open { background: var(--rb-positive-soft); color: var(--rb-positive-deep); }
 .runner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
 .runner-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .8rem; align-items: center; min-block-size: 4.65rem; padding: .85rem; border: 1px solid var(--rb-line); border-radius: .9rem; background: white; color: var(--rb-ink); cursor: pointer; text-align: start; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
-.runner-card:not(:disabled):hover { border-color: #9db9a7; background: #fbfcfb; transform: translateY(-1px); }
+.runner-card:not(:disabled):hover { border-color: color-mix(in srgb, var(--rb-brand) 45%, var(--rb-line)); background: color-mix(in srgb, var(--rb-brand-soft) 32%, white); transform: translateY(-1px); }
 .runner-card:disabled { cursor: default; opacity: .58; }
-.runner-card.selected { border-color: var(--rb-turf); background: var(--rb-turf-soft); opacity: 1; }
+.runner-card.selected { border-color: var(--rb-brand); background: var(--rb-brand-soft); opacity: 1; }
 .runner-card.winner { border-color: #d6b469; background: #fffbf2; opacity: 1; }
 .runner-number { display: grid; inline-size: 2.2rem; block-size: 2.2rem; place-items: center; border-radius: .65rem; background: var(--rb-panel); font-size: .8rem; font-weight: 750; }
-.runner-card.selected .runner-number { background: var(--rb-turf); color: white; }
+.runner-card.selected .runner-number { background: var(--rb-brand); color: white; }
 .runner-card.winner .runner-number { background: #9a6e18; color: white; }
 .runner-main { display: grid; min-inline-size: 0; gap: .2rem; }
 .runner-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runner-main small { color: var(--rb-muted); font-size: .78rem; }
-.runner-cta { color: var(--rb-turf-deep); font-size: .76rem; font-weight: 700; }
+.runner-cta { color: var(--rb-brand-deep); font-size: .76rem; font-weight: 700; }
+.runner-card.winner .runner-cta { color: #75510f; }
 
 .waiting-room { display: grid; min-block-size: calc(100vh - 8rem); place-content: center; justify-items: center; padding: 2rem; text-align: center; }
 .waiting-mark { inline-size: 4.5rem; block-size: 4.5rem; margin-block-end: 1.25rem; overflow: hidden; border-radius: 1rem; }

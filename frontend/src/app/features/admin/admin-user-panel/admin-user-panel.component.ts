@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TuiTable } from '@taiga-ui/addon-table';
 import { TuiButton, TuiCheckbox, TuiInput, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 import { TuiBadge, TuiSwitch } from '@taiga-ui/kit';
@@ -14,7 +15,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-admin-user-panel',
-  imports: [ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiCheckbox, TuiHeader, TuiInput, TuiSwitch, TuiTitle],
+  imports: [ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiCheckbox, TuiHeader, TuiInput, TuiSwitch, TuiTable, TuiTitle],
   templateUrl: './admin-user-panel.component.html',
   styleUrl: './admin-user-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush

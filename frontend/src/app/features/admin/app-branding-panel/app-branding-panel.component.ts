@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TuiButton, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 
 import { AppBrandingService } from '../../../core/branding/app-branding.service';
+import { AppBrandingTheme } from '../../../core/branding/app-branding.model';
 import { AdminApiService } from '../services/admin-api.service';
 
 @Component({
@@ -14,11 +15,12 @@ import { AdminApiService } from '../services/admin-api.service';
   styleUrl: './app-branding-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AppBrandingPanelComponent {
+export class AppBrandingPanelComponent implements OnDestroy {
   private readonly adminApi = inject(AdminApiService);
   protected readonly branding = inject(AppBrandingService);
 
   readonly selectedImage = signal<File | null>(null);
+  readonly selectedTheme = signal<AppBrandingTheme>('DEFAULT');
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -42,6 +44,10 @@ export class AppBrandingPanelComponent {
     void this.load();
   }
 
+  ngOnDestroy(): void {
+    this.branding.clearThemePreview();
+  }
+
   protected async load(): Promise<void> {
     await this.run(async () => {
       const settings = await this.adminApi.findBranding();
@@ -51,6 +57,7 @@ export class AppBrandingPanelComponent {
         loginTitle: settings.loginTitle,
         loginSubtitle: settings.loginSubtitle
       });
+      this.selectedTheme.set(settings.theme);
     }, false);
   }
 
@@ -71,6 +78,11 @@ export class AppBrandingPanelComponent {
     this.error.set(null);
   }
 
+  protected selectTheme(theme: AppBrandingTheme): void {
+    this.selectedTheme.set(theme);
+    this.branding.previewTheme(theme);
+  }
+
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -82,6 +94,7 @@ export class AppBrandingPanelComponent {
       data.append('appName', this.form.controls.appName.value.trim());
       data.append('loginTitle', this.form.controls.loginTitle.value.trim());
       data.append('loginSubtitle', this.form.controls.loginSubtitle.value.trim());
+      data.append('theme', this.selectedTheme());
       const image = this.selectedImage();
       if (image !== null) data.append('image', image);
 
@@ -92,6 +105,7 @@ export class AppBrandingPanelComponent {
         loginTitle: settings.loginTitle,
         loginSubtitle: settings.loginSubtitle
       });
+      this.selectedTheme.set(settings.theme);
       this.selectedImage.set(null);
       this.success.set('Le branding de l’application a été mis à jour.');
     });
