@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TuiButton, TuiInput, TuiLoader } from '@taiga-ui/core';
+import { TimeoutError } from 'rxjs';
 
 import { QuizAnswerRequest, QuizQuestionRequest, QuizSetRequest } from '../models/quiz-api.model';
 import { QuizApiService } from '../services/quiz-api.service';
@@ -244,6 +245,12 @@ export class QuizEditorPageComponent {
   }
 
   private errorMessage(error: unknown): string {
+    if (error instanceof TimeoutError) {
+      return 'L’enregistrement a pris trop de temps. Vérifiez votre connexion puis réessayez.';
+    }
+    if (error instanceof HttpErrorResponse && error.status === 413) {
+      return 'Le questionnaire contient trop d’images volumineuses. Allégez-les puis réessayez.';
+    }
     if (error instanceof HttpErrorResponse && typeof error.error === 'object' && error.error !== null) {
       const backend = error.error as BackendErrorResponse;
       if (typeof backend.message === 'string') return backend.message;

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 
 import {
   QuizSessionSnapshotResponse,
@@ -13,6 +13,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class QuizApiService {
   private readonly http = inject(HttpClient);
+  private readonly saveTimeoutMs = 60_000;
 
   findQuizSets(): Promise<readonly QuizSetListResponse[]> {
     return firstValueFrom(this.http.get<readonly QuizSetListResponse[]>('/api/admin/quizzes'));
@@ -23,11 +24,19 @@ export class QuizApiService {
   }
 
   createQuizSet(request: QuizSetRequest): Promise<QuizSetDetailResponse> {
-    return firstValueFrom(this.http.post<QuizSetDetailResponse>('/api/admin/quizzes', request));
+    return firstValueFrom(
+      this.http
+        .post<QuizSetDetailResponse>('/api/admin/quizzes', request)
+        .pipe(timeout(this.saveTimeoutMs))
+    );
   }
 
   updateQuizSet(id: number, request: QuizSetRequest): Promise<QuizSetDetailResponse> {
-    return firstValueFrom(this.http.put<QuizSetDetailResponse>(`/api/admin/quizzes/${id}`, request));
+    return firstValueFrom(
+      this.http
+        .put<QuizSetDetailResponse>(`/api/admin/quizzes/${id}`, request)
+        .pipe(timeout(this.saveTimeoutMs))
+    );
   }
 
   deleteQuizSet(id: number): Promise<void> {
