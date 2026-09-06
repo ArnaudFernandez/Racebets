@@ -12,6 +12,7 @@ public record QuizSessionSnapshotResponse(
         QuizSessionPhase phase,
         int currentQuestionIndex,
         int questionCount,
+        long participantCount,
         Instant serverTime,
         Instant phaseStartedAt,
         Instant questionEndsAt,

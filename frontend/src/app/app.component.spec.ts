@@ -104,6 +104,7 @@ describe('AppComponent', () => {
       imageUrl: '/api/app/branding/image?v=3',
       loginTitle: 'Vibrez ensemble',
       loginSubtitle: 'Une expérience en direct.',
+      passwordlessLoginEnabled: false,
       theme: 'OLIFAN_GROUP'
     });
     fixture.detectChanges();

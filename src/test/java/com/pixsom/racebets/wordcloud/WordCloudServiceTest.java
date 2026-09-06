@@ -25,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,14 +83,17 @@ class WordCloudServiceTest {
     }
 
     @Test
-    void inactiveWordCloudModeRejectsOpeningBeforeQuestionLock() {
-        org.mockito.Mockito.doThrow(new ConflictException("Application mode WORD_CLOUD is not active"))
-                .when(featureSettingsService).requireActiveMode(AppMode.WORD_CLOUD);
+    void openingActivatesWordCloudModeBeforeLockingTheQuestion() {
+        WordCloudQuestion question = question(2L, WordCloudQuestionStatus.DRAFT);
+        when(questionRepository.findLockedById(2L)).thenReturn(Optional.of(question));
+        when(questionRepository.existsByActiveSlotTrue()).thenReturn(false);
+        when(questionRepository.saveAndFlush(question)).thenReturn(question);
 
-        assertThatThrownBy(() -> service.openQuestion(2L))
-                .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("not active");
-        verify(questionRepository, never()).findLockedById(any());
+        service.openQuestion(2L);
+
+        var calls = inOrder(featureSettingsService, questionRepository);
+        calls.verify(featureSettingsService).activateMode(AppMode.WORD_CLOUD);
+        calls.verify(questionRepository).findLockedById(2L);
     }
 
     @Test
@@ -213,6 +217,33 @@ class WordCloudServiceTest {
 
         assertThat(service.findAdminLive().orElseThrow().words()).hasSize(1);
         assertThat(service.findAdminLive()).isEmpty();
+    }
+
+    @Test
+    void publicDisplaySeesModeratedAggregatesWhileQuestionIsOpen() {
+        WordCloudQuestion question = question(12L, WordCloudQuestionStatus.OPEN);
+        question.setActiveSlot(true);
+        AppUser firstUser = user(17L);
+        AppUser secondUser = user(18L);
+        AppUser thirdUser = user(19L);
+        WordCloudModeratedWord moderatedWord = new WordCloudModeratedWord();
+        moderatedWord.setQuestion(question);
+        moderatedWord.setNormalizedText("masque");
+        when(questionRepository.findByActiveSlotTrue()).thenReturn(Optional.of(question));
+        when(responseRepository.findByQuestionOrderByCreatedAtAscIdAsc(question)).thenReturn(List.of(
+                response(question, firstUser, "Vitesse", "vitesse"),
+                response(question, secondUser, "vitesse", "vitesse"),
+                response(question, thirdUser, "Masqué", "masque")
+        ));
+        when(moderatedWordRepository.findByQuestion(question)).thenReturn(List.of(moderatedWord));
+
+        WordCloudSnapshotResponse snapshot = service.findPublicLive().orElseThrow();
+
+        assertThat(snapshot.status()).isEqualTo(WordCloudQuestionStatus.OPEN);
+        assertThat(snapshot.currentUserResponse()).isNull();
+        assertThat(snapshot.words())
+                .extracting(word -> word.text() + ":" + word.count())
+                .containsExactly("Vitesse:2");
     }
 
     @Test

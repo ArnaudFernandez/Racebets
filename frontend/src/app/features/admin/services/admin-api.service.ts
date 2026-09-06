@@ -13,7 +13,9 @@ import {
   RaceAdminResponse,
   RaceControl,
   RaceHistoryDetail,
-  RaceHistorySummary
+  RaceHistorySummary,
+  UserImportPreview,
+  UserImportResult
 } from '../models/admin-api.model';
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +37,24 @@ export class AdminApiService {
 
   deleteUser(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/users/${id}`));
+  }
+
+  previewUserImport(file: File): Promise<UserImportPreview> {
+    const data = new FormData();
+    data.append('file', file);
+    return firstValueFrom(
+      this.http.post<UserImportPreview>(`${this.baseUrl}/users/import/preview`, data)
+    );
+  }
+
+  confirmUserImport(file: File, preview: UserImportPreview): Promise<UserImportResult> {
+    const data = new FormData();
+    data.append('file', file);
+    data.append('fileDigest', preview.fileDigest);
+    data.append('planFingerprint', preview.planFingerprint);
+    return firstValueFrom(
+      this.http.post<UserImportResult>(`${this.baseUrl}/users/import/confirm`, data)
+    );
   }
 
   findHorses(): Promise<readonly HorseAdminResponse[]> {

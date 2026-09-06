@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,6 +61,17 @@ class WordCloudControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         verify(service).findPlayerLive(42L);
+    }
+
+    @Test
+    void publicLiveEndpointNeedsNoAuthenticatedPrincipal() throws Exception {
+        when(service.findPublicLive()).thenReturn(Optional.empty());
+        MockMvc playerMvc = MockMvcBuilders.standaloneSetup(new WordCloudPlayerController(service)).build();
+
+        playerMvc.perform(get("/api/word-cloud/public/live"))
+                .andExpect(status().isNoContent());
+
+        verify(service).findPublicLive();
     }
 
     @Test

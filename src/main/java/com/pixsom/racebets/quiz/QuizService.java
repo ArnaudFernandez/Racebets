@@ -187,6 +187,16 @@ public class QuizService {
         return toSnapshot(session, null, true);
     }
 
+    @Transactional
+    public QuizSessionSnapshotResponse stopSession(Long sessionId) {
+        QuizSession session = findSessionForUpdate(sessionId);
+        if (!LIVE_PHASES.contains(session.getPhase())) {
+            throw new ConflictException("Seule une session de quiz active peut etre arretee");
+        }
+        setPhase(session, QuizSessionPhase.CANCELLED);
+        return toSnapshot(session, null, true);
+    }
+
     @Transactional(readOnly = true)
     public List<QuizSessionSummaryResponse> findLiveSessions() {
         return quizSessionRepository.findByPhaseInOrderByCreatedAtDesc(LIVE_PHASES)
@@ -217,8 +227,8 @@ public class QuizService {
     public QuizSessionSnapshotResponse joinSession(Long sessionId, Authentication authentication) {
         featureSettingsService.requireActiveMode(AppMode.QUIZ);
         QuizSession session = findSession(sessionId);
-        if (session.getPhase() == QuizSessionPhase.FINISHED) {
-            throw new ConflictException("This quiz session is already finished");
+        if (!LIVE_PHASES.contains(session.getPhase())) {
+            throw new ConflictException("This quiz session is no longer active");
         }
         AppUser user = currentUser(authentication);
         if (!participantRepository.existsBySessionAndUser(session, user)) {
@@ -367,7 +377,8 @@ public class QuizService {
     private void setPhase(QuizSession session, QuizSessionPhase phase) {
         session.setPhase(phase);
         session.setPhaseStartedAt(Instant.now());
-        session.setActiveSlot(phase == QuizSessionPhase.FINISHED ? null : true);
+        boolean terminal = phase == QuizSessionPhase.FINISHED || phase == QuizSessionPhase.CANCELLED;
+        session.setActiveSlot(terminal ? null : true);
     }
 
     private boolean isQuestionExpired(QuizSession session, Instant now) {
@@ -425,7 +436,7 @@ public class QuizService {
                 session.getPhase(),
                 session.getCurrentQuestionIndex(),
                 session.getQuizSet().getQuestions().size(),
-                participantRepository.findBySession(session).size()
+                participantRepository.countBySession(session)
         );
     }
 
@@ -457,6 +468,7 @@ public class QuizService {
                 session.getPhase(),
                 session.getCurrentQuestionIndex(),
                 session.getQuizSet().getQuestions().size(),
+                participantRepository.countBySession(session),
                 serverTime,
                 session.getPhaseStartedAt(),
                 questionEndsAt,

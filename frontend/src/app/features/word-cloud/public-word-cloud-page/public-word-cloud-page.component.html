@@ -1,0 +1,32 @@
+<main class="public-cloud-page">
+  @if (snapshot(); as question) {
+    <section class="live-stage" aria-labelledby="public-cloud-question">
+      <header class="question-heading">
+        <h1 id="public-cloud-question">{{ question.text }}</h1>
+      </header>
+
+      <div class="cloud-field" role="list" aria-label="Nuage de mots en direct" aria-live="polite">
+        @for (word of cloudWords(); track word.text) {
+          <span
+            role="listitem"
+            class="cloud-word"
+            [style.color]="word.color"
+            [style.font-size]="word.fontSize"
+            [style.transform]="word.rotation"
+            [attr.aria-label]="
+              word.text + ', ' + word.count + ' occurrence' + (word.count > 1 ? 's' : '')
+            "
+            [attr.title]="
+              word.text + ' · ' + word.count + ' occurrence' + (word.count > 1 ? 's' : '')
+            "
+            >{{ word.text }}</span
+          >
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="waiting-stage" role="status">
+      <h1>En attente d'un nuage de mots</h1>
+    </section>
+  }
+</main>

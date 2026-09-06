@@ -49,7 +49,9 @@ Points importants :
 - Le nom Java est singulier et evite la collision avec `org.springframework.security.core.userdetails.User`.
 - Les roles sont stockes en `@ElementCollection` avec `EnumType.STRING`.
 - Le secret d'acces est stocke sous forme de `passwordHash`, jamais en clair.
-- L'authentification actuelle utilise `email + accessCode`, avec verification BCrypt.
+- L'authentification utilise par defaut `email + accessCode`, avec verification BCrypt.
+- Le branding peut activer temporairement une connexion par email seul pour les comptes sans role `ADMIN`. Les comptes
+  administrateurs exigent toujours leur secret BCrypt, independamment de ce reglage.
 
 ### Race
 
@@ -455,9 +457,19 @@ La liste publique ne retourne que les partenaires coches et leurs logos sont mis
 d'URL basee sur `updatedAt`. Le frontend ne les affiche que lorsque le snapshot live ne contient aucune course. Le
 Le branding de l'application est porte par le singleton `AppBrandingSettings`. Le nom est expose dans le titre du
 document et l'entete ; le titre principal et le sous-titre de l'ecran de connexion sont egalement configurables.
+Le reglage `passwordlessLoginEnabled`, desactive par defaut, autorise les participants connus a se connecter avec leur
+email seul. Son activation exige une confirmation explicite dans l'administration. La politique est revalidee par le
+backend a chaque connexion et ne s'applique jamais a un compte possedant le role `ADMIN`.
 L'image personnalisee est servie par `/api/app/branding/image` avec une URL versionnee. La lecture du branding et de
 son media est publique afin que l'ecran de connexion et les balises `<img>` puissent les charger sans JWT. Le fallback
 reste `logo_le_bouscat.png`, carre en 600 x 600, utilise sans deformation.
+
+L'administration des utilisateurs accepte un import CSV en deux temps. `/api/admin/users/import/preview` decode le
+fichier en UTF-8 ou Windows-1252, ignore les lignes de section et prepare un plan sans ecriture. La confirmation renvoie
+le meme fichier a `/api/admin/users/import/confirm` avec les empreintes du fichier et du plan. Le backend revalide alors
+les donnees et l'etat courant avant une ecriture transactionnelle. L'email normalise est la cle d'idempotence. Les
+nouveaux comptes sont presents avec le role `USER` et sans mot de passe ; un compte existant conserve ses roles, son
+mot de passe, ses liaisons externes, son tutoriel et son historique.
 
 ## Administration Et Pilotage Des Quiz
 
@@ -468,7 +480,8 @@ UI et expose leur disponibilite. La creation et l'edition sont portees par les r
 suivante explicite, action d'avancement unique et rafraichissement leger des compteurs.
 
 La machine d'etats reste lineaire : `OPENING -> QUESTION_OPEN -> QUESTION_LOCKED -> ANSWER_REVEALED -> SCOREBOARD`,
-puis retour a `QUESTION_OPEN` pour la question suivante ou passage a `FINISHED`. Le frontend ne choisit jamais un
+puis retour a `QUESTION_OPEN` pour la question suivante ou passage a `FINISHED`. Toute phase active peut aussi passer
+a `CANCELLED` lorsqu'un administrateur arrete explicitement la session. Le frontend ne choisit jamais un
 etat arbitraire. L'etape `QUESTION_OPEN -> QUESTION_LOCKED` est declenchee par `QuizSessionScheduler` a l'echeance
 calculee par le serveur. L'admin peut toutefois provoquer cette transition avant l'echeance depuis la console, apres
 une confirmation explicite qui rappelle le temps restant. Les autres transitions restent pilotees depuis la console
@@ -478,11 +491,11 @@ Pendant `QUESTION_OPEN`, une soumission existante est mise a jour plutot que rej
 changer de choix autant de fois qu'il le souhaite. Le service verrouille la session avant de comparer l'heure serveur
 a `questionEndsAt`, ce qui definit un ordre exact entre une derniere reponse et la fermeture automatique. Les
 snapshots exposent `serverTime` et `questionEndsAt` pour synchroniser le compte a rebours client sans faire confiance
-a l'horloge du telephone. En `FINISHED`, le client quitte automatiquement la session et revient vers l'ecran principal
-active par la configuration fonctionnelle.
+a l'horloge du telephone. En `FINISHED`, le client conserve le snapshot final pour presenter le podium. En
+`CANCELLED`, aucun podium n'est affiche et les clients reviennent immediatement a l'etat sans session active.
 
 Une session live occupe `quiz_sessions.active_slot = TRUE`. Cette colonne nullable porte une contrainte d'unicite :
-les sessions terminees liberent le slot avec `NULL`, tandis qu'une seconde ouverture concurrente echoue en base,
+les sessions terminees ou annulees liberent le slot avec `NULL`, tandis qu'une seconde ouverture concurrente echoue en base,
 meme si deux requetes ont franchi simultanement la verification applicative. Un questionnaire utilise par la session
 active ne peut etre ni modifie ni supprime.
 

@@ -75,6 +75,10 @@ export class QuizApiService {
     return this.transition(sessionId, 'next');
   }
 
+  stopSession(sessionId: number): Promise<QuizSessionSnapshotResponse> {
+    return this.transition(sessionId, 'stop');
+  }
+
   findLiveSessions(): Promise<readonly QuizSessionSummaryResponse[]> {
     return firstValueFrom(this.http.get<readonly QuizSessionSummaryResponse[]>('/api/quizzes/live'));
   }

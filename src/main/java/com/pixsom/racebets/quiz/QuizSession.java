@@ -44,7 +44,7 @@ public class QuizSession extends AuditableEntity {
 
     /**
      * Database-backed singleton slot. Live sessions own the only TRUE value;
-     * finished sessions release it by storing NULL (unique constraints allow
+     * terminal sessions release it by storing NULL (unique constraints allow
      * multiple NULL values on PostgreSQL and H2).
      */
     @Column(name = "active_slot", unique = true)

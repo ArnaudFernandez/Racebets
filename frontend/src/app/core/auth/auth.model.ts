@@ -2,7 +2,7 @@ export type UserRole = 'ADMIN' | 'USER' | 'VIP';
 
 export interface LoginRequest {
   readonly email: string;
-  readonly accessCode: string;
+  readonly accessCode?: string;
 }
 
 export interface RegisterRequest {

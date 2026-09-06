@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TuiButton, TuiDialog, TuiLoader } from '@taiga-ui/core';
 import { TuiBadge } from '@taiga-ui/kit';
 
@@ -21,15 +21,18 @@ interface BackendErrorResponse {
 export class QuizControlPageComponent implements OnDestroy {
   private readonly quizApi = inject(QuizApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly sessionId = Number(this.route.snapshot.paramMap.get('sessionId'));
   private readonly pollId: number;
   private readonly clockId: number;
+  private refreshing = false;
 
   readonly session = signal<QuizSessionSnapshotResponse | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
   readonly earlyStopDialogOpen = signal(false);
+  readonly stopQuizDialogOpen = signal(false);
   readonly now = signal(Date.now());
   readonly serverClockOffset = signal(0);
   readonly remainingSeconds = computed(() => {
@@ -71,7 +74,8 @@ export class QuizControlPageComponent implements OnDestroy {
       QUESTION_LOCKED: 'Réponses closes',
       ANSWER_REVEALED: 'Correction',
       SCOREBOARD: 'Classement',
-      FINISHED: 'Terminé'
+      FINISHED: 'Terminé',
+      CANCELLED: 'Arrêté'
     })[phase];
   }
 
@@ -86,7 +90,8 @@ export class QuizControlPageComponent implements OnDestroy {
       QUESTION_LOCKED: 'Révéler la bonne réponse',
       ANSWER_REVEALED: 'Afficher le classement',
       SCOREBOARD: session.currentQuestionIndex + 1 >= session.questionCount ? 'Terminer le quiz' : 'Question suivante',
-      FINISHED: ''
+      FINISHED: '',
+      CANCELLED: ''
     })[session.phase];
   }
 
@@ -97,7 +102,8 @@ export class QuizControlPageComponent implements OnDestroy {
       QUESTION_LOCKED: 'La correction sera affichée à tous les participants.',
       ANSWER_REVEALED: 'Le classement actualisé apparaîtra sur les écrans.',
       SCOREBOARD: 'Le déroulé continuera vers la prochaine question.',
-      FINISHED: ''
+      FINISHED: '',
+      CANCELLED: ''
     })[phase];
   }
 
@@ -111,7 +117,7 @@ export class QuizControlPageComponent implements OnDestroy {
 
   protected async advance(): Promise<void> {
     const session = this.session();
-    if (session === null || session.phase === 'QUESTION_OPEN' || session.phase === 'FINISHED') return;
+    if (session === null || session.phase === 'QUESTION_OPEN' || session.phase === 'FINISHED' || session.phase === 'CANCELLED') return;
     await this.run(async () => {
       const updated = await this.transition(session);
       this.applySession(updated);
@@ -141,12 +147,43 @@ export class QuizControlPageComponent implements OnDestroy {
     });
   }
 
+  protected requestQuizStop(): void {
+    const phase = this.session()?.phase;
+    if (phase === undefined || phase === 'FINISHED' || phase === 'CANCELLED') return;
+    this.stopQuizDialogOpen.set(true);
+  }
+
+  protected cancelQuizStop(): void {
+    this.stopQuizDialogOpen.set(false);
+  }
+
+  protected stopQuizDialogOpenChange(open: boolean): void {
+    if (!open) this.cancelQuizStop();
+  }
+
+  protected async confirmQuizStop(): Promise<void> {
+    const session = this.session();
+    if (session === null || session.phase === 'FINISHED' || session.phase === 'CANCELLED') {
+      this.stopQuizDialogOpen.set(false);
+      return;
+    }
+    this.stopQuizDialogOpen.set(false);
+    await this.run(async () => {
+      await this.quizApi.stopSession(session.id);
+      await this.returnToQuizList();
+    });
+  }
+
   protected async refresh(showError = true): Promise<void> {
+    if (this.refreshing) return;
+    this.refreshing = true;
     try {
       this.applySession(await this.quizApi.findAdminSession(this.sessionId));
       if (showError) this.error.set(null);
     } catch (error: unknown) {
       if (showError) this.error.set(this.errorMessage(error));
+    } finally {
+      this.refreshing = false;
     }
   }
 
@@ -158,10 +195,17 @@ export class QuizControlPageComponent implements OnDestroy {
       case 'ANSWER_REVEALED': return this.quizApi.showScoreboard(session.id);
       case 'SCOREBOARD': return this.quizApi.nextQuestion(session.id);
       case 'FINISHED': return Promise.resolve(session);
+      case 'CANCELLED': return Promise.resolve(session);
     }
   }
 
   private applySession(session: QuizSessionSnapshotResponse): void {
+    if (session.phase === 'CANCELLED') {
+      this.earlyStopDialogOpen.set(false);
+      this.stopQuizDialogOpen.set(false);
+      void this.returnToQuizList();
+      return;
+    }
     const serverTime = Date.parse(session.serverTime ?? '');
     this.serverClockOffset.set(Number.isFinite(serverTime) ? serverTime - Date.now() : 0);
     this.now.set(Date.now());
@@ -189,7 +233,8 @@ export class QuizControlPageComponent implements OnDestroy {
       QUESTION_LOCKED: 'Les réponses sont verrouillées.',
       ANSWER_REVEALED: 'La bonne réponse est révélée.',
       SCOREBOARD: 'Le classement est affiché.',
-      FINISHED: 'Le quiz est terminé. Une nouvelle session peut désormais être lancée.'
+      FINISHED: 'Le quiz est terminé. Une nouvelle session peut désormais être lancée.',
+      CANCELLED: ''
     })[phase];
   }
 
@@ -199,5 +244,9 @@ export class QuizControlPageComponent implements OnDestroy {
       if (typeof backend.message === 'string') return backend.message;
     }
     return 'Impossible de mettre à jour la session pour le moment.';
+  }
+
+  private returnToQuizList(): Promise<boolean> {
+    return this.router.navigate(['/admin'], { queryParams: { section: 'quizzes' } });
   }
 }

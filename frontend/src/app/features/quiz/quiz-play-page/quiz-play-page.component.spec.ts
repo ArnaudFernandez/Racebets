@@ -10,7 +10,7 @@ import { provideRouter } from '@angular/router';
 import { provideTaiga } from '@taiga-ui/core';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import { AppFeaturesService } from '../../../core/features/app-features.service';
+import { PartnerService } from '../../betting/services/partner.service';
 import { QuizSessionPhase, QuizSessionSnapshotResponse } from '../models/quiz-api.model';
 import { QuizApiService } from '../services/quiz-api.service';
 import { QuizPlayPageComponent } from './quiz-play-page.component';
@@ -27,6 +27,12 @@ describe('QuizPlayPageComponent', () => {
     joinSession: jasmine.createSpy('joinSession').and.callFake(async () => activeSnapshot),
     answer: jasmine.createSpy('answer').and.callFake(async () => activeSnapshot)
   };
+  const partnerService = {
+    findVisible: jasmine.createSpy('findVisible').and.resolveTo([
+      { id: 1, name: 'Pixsom', displayOnWaiting: true, logoUrl: '/api/partners/1/logo' },
+      { id: 2, name: 'Olifan', displayOnWaiting: true, logoUrl: '/api/partners/2/logo' }
+    ])
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -35,6 +41,7 @@ describe('QuizPlayPageComponent', () => {
         provideRouter([]),
         provideTaiga(),
         { provide: QuizApiService, useValue: quizApi },
+        { provide: PartnerService, useValue: partnerService },
         {
           provide: AuthService,
           useValue: {
@@ -49,13 +56,6 @@ describe('QuizPlayPageComponent', () => {
               roles: ['USER']
             })
           }
-        },
-        {
-          provide: AppFeaturesService,
-          useValue: {
-            ensureLoaded: async () => ({ activeMode: 'QUIZ' }),
-            defaultPath: () => '/quiz'
-          }
         }
       ]
     }).compileComponents();
@@ -66,6 +66,7 @@ describe('QuizPlayPageComponent', () => {
     quizApi.findSession.calls.reset();
     quizApi.joinSession.calls.reset();
     quizApi.answer.calls.reset();
+    partnerService.findVisible.calls.reset();
   });
 
   it('presents the image and four large answer choices during a question', fakeAsync(() => {
@@ -267,6 +268,15 @@ describe('QuizPlayPageComponent', () => {
     expect(root.querySelector('.player-summary')?.textContent).toContain('2e');
     expect(root.querySelector('.summary-score strong')?.textContent).toBe('2');
     expect(root.querySelector('.summary-score span')?.textContent).toBe('points');
+    const logos = root.querySelectorAll<HTMLImageElement>('.scoreboard-partners img');
+    expect(logos.length).toBe(2);
+    expect(logos[0].alt).toBe('Pixsom');
+    expect(root.querySelector('.player-summary')?.nextElementSibling).toHaveClass(
+      'scoreboard-partners'
+    );
+    expect(root.querySelector('.scoreboard-partners')?.nextElementSibling).toHaveClass(
+      'leaderboard'
+    );
     expect(root.textContent).not.toContain('Quelle casaque franchit la ligne en tête ?');
     expect(document.activeElement).toBe(root.querySelector('#scoreboard-title'));
 
@@ -303,14 +313,13 @@ describe('QuizPlayPageComponent', () => {
     discardPeriodicTasks();
   }));
 
-  it('clears every live scene when the session finishes', fakeAsync(() => {
+  it('renders the final podium with the three ranked winners', fakeAsync(() => {
     const finishedSnapshot = snapshot('FINISHED', 11, 11, true);
 
     renderSnapshot({
       ...finishedSnapshot,
       currentQuestion: null,
-      questionEndsAt: null,
-      scores: []
+      questionEndsAt: null
     });
 
     const root = fixture.nativeElement as HTMLElement;
@@ -319,6 +328,25 @@ describe('QuizPlayPageComponent', () => {
     expect(root.querySelector('.game-stage')).toBeNull();
     expect(root.querySelector('.reveal-stage')).toBeNull();
     expect(root.querySelector('.quiz-scoreboard-stage')).toBeNull();
+    expect(root.querySelector('.final-podium-stage')).not.toBeNull();
+    const third = root.querySelector<HTMLElement>('.place-third');
+    const second = root.querySelector<HTMLElement>('.place-second');
+    const first = root.querySelector<HTMLElement>('.place-first');
+    expect(third?.textContent).toContain('Nora Petit');
+    expect(second?.textContent).toContain('Camille Martin');
+    expect(first?.textContent).toContain('Alex Bernard');
+    expect(document.activeElement).toBe(root.querySelector('#podium-title'));
+
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
+
+  it('returns to the waiting state without a podium when the quiz is cancelled', fakeAsync(() => {
+    renderPhase('CANCELLED', null, null);
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.snapshot()).toBeNull();
+    expect(root.querySelector('.final-podium-stage')).toBeNull();
     expect(root.querySelector('.empty-session')).not.toBeNull();
 
     fixture.destroy();

@@ -3,6 +3,13 @@
     <img [src]="branding.imageUrl()" alt="" />
     <h1>{{ branding.loginTitle() }}</h1>
     <p>{{ branding.loginSubtitle() }}</p>
+    @if (partners().length > 0) {
+      <div class="login-partners" aria-label="Partenaires de l’événement">
+        @for (partner of partners(); track partner.id) {
+          <img [src]="partner.logoUrl" [alt]="partner.name" [title]="partner.name" />
+        }
+      </div>
+    }
   </section>
 
   <section tuiCardLarge="compact" class="login-card">
@@ -53,16 +60,23 @@
           </tui-textfield>
         </label>
 
-        <label class="field-copy">
-          Mot de passe
-          <tui-textfield>
-            <input tuiInput formControlName="accessCode" type="password" placeholder="Votre mot de passe" autocomplete="current-password" />
-          </tui-textfield>
-        </label>
+        @if (passwordRequired()) {
+          <label class="field-copy">
+            Mot de passe
+            <tui-textfield>
+              <input tuiInput formControlName="accessCode" type="password" placeholder="Votre mot de passe" autocomplete="current-password" />
+            </tui-textfield>
+          </label>
+        }
 
         <button tuiButton type="submit" size="l" [disabled]="loading()">
           {{ loading() ? 'Connexion...' : 'Se connecter' }}
         </button>
+        @if (branding.passwordlessLoginEnabled()) {
+          <button class="admin-login-toggle" type="button" (click)="adminLogin() ? useParticipantLogin() : useAdminLogin()">
+            {{ adminLogin() ? 'Revenir à la connexion participant' : 'Je suis un admin' }}
+          </button>
+        }
       </form>
       } @else {
       <form class="form" [formGroup]="registerForm" (ngSubmit)="register()">

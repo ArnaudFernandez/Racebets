@@ -6,7 +6,7 @@
   @if (snapshot(); as session) {
     <p class="visually-hidden" aria-live="polite">{{ phaseLabel(session.phase) }}</p>
 
-    @if (session.phase !== 'SCOREBOARD') {
+    @if (session.phase !== 'SCOREBOARD' && session.phase !== 'FINISHED') {
       <header class="live-header">
         <div class="live-title">
           <span class="live-dot" aria-hidden="true"></span>
@@ -29,7 +29,46 @@
       </header>
     }
 
-    @if (!session.joined && session.phase !== 'SCOREBOARD') {
+    @if (session.phase === 'FINISHED') {
+      <section class="final-podium-stage" aria-labelledby="podium-title">
+        <header class="podium-heading">
+          <span><tui-icon icon="@tui.star" aria-hidden="true" /> Quiz terminé</span>
+          <h1 #podiumHeading id="podium-title" tabindex="-1">Place aux gagnants !</h1>
+          <p>{{ session.title }}</p>
+        </header>
+
+        <div class="podium" aria-label="Podium final">
+          @for (winner of podiumWinners(); track winner.score.userId) {
+            <article
+              class="podium-place"
+              [class.place-first]="winner.rank === 1"
+              [class.place-second]="winner.rank === 2"
+              [class.place-third]="winner.rank === 3"
+            >
+              <div class="winner-card">
+                @if (winner.rank === 1) {
+                  <span class="champion-stars" aria-hidden="true">
+                    <tui-icon icon="@tui.star" />
+                    <tui-icon icon="@tui.star" />
+                    <tui-icon icon="@tui.star" />
+                  </span>
+                }
+                <span>{{ rankLabel(winner.rank) }}</span>
+                <strong>{{ winner.score.displayName }}</strong>
+                <small
+                  >{{ winner.score.score }} point{{ winner.score.score > 1 ? 's' : '' }}</small
+                >
+              </div>
+              <div class="podium-step" aria-hidden="true"><strong>{{ winner.rank }}</strong></div>
+            </article>
+          } @empty {
+            <p class="podium-empty">Le podium sera disponible dès qu’un participant aura rejoint le quiz.</p>
+          }
+        </div>
+
+        <button type="button" (click)="backToSessions()">Quitter le podium</button>
+      </section>
+    } @else if (!session.joined && session.phase !== 'SCOREBOARD') {
       <section class="welcome-state">
         <h1>{{ session.title }}</h1>
         <div class="welcome-facts">
@@ -91,6 +130,14 @@
                 <span>point{{ playerScore.score > 1 ? 's' : '' }}</span>
               </div>
             </section>
+          }
+
+          @if (partners().length > 0) {
+            <div class="scoreboard-partners" aria-label="Partenaires de l’événement">
+              @for (partner of partners(); track partner.id) {
+                <img [src]="partner.logoUrl" [alt]="partner.name" [title]="partner.name" />
+              }
+            </div>
           }
 
           <ol class="leaderboard" aria-label="Scores des joueurs">

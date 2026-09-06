@@ -2,11 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TuiTable } from '@taiga-ui/addon-table';
-import { TuiButton, TuiCheckbox, TuiInput, TuiTitle } from '@taiga-ui/core';
+import { TuiButton, TuiCheckbox, TuiDialog, TuiInput, TuiTitle } from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 import { TuiBadge, TuiSwitch } from '@taiga-ui/kit';
 
-import { AdminUserRequest, AdminUserResponse, UserRole } from '../models/admin-api.model';
+import { AdminUserRequest, AdminUserResponse, UserImportAction, UserImportPreview, UserRole } from '../models/admin-api.model';
 import { AdminApiService } from '../services/admin-api.service';
 
 interface BackendErrorResponse {
@@ -15,7 +15,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-admin-user-panel',
-  imports: [ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiCheckbox, TuiHeader, TuiInput, TuiSwitch, TuiTable, TuiTitle],
+  imports: [ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiCheckbox, TuiDialog, TuiHeader, TuiInput, TuiSwitch, TuiTable, TuiTitle],
   templateUrl: './admin-user-panel.component.html',
   styleUrl: './admin-user-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -29,6 +29,9 @@ export class AdminUserPanelComponent {
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
   readonly deleteTarget = signal<AdminUserResponse | null>(null);
+  readonly importFile = signal<File | null>(null);
+  readonly importPreview = signal<UserImportPreview | null>(null);
+  readonly importConfirmationOpen = signal(false);
 
   readonly userForm = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }),
@@ -138,6 +141,67 @@ export class AdminUserPanelComponent {
     });
   }
 
+  protected selectImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.item(0) ?? null;
+    this.importPreview.set(null);
+    this.importConfirmationOpen.set(false);
+    if (file !== null && (!file.name.toLowerCase().endsWith('.csv') || file.size > 1024 * 1024)) {
+      this.importFile.set(null);
+      this.error.set('Choisissez un fichier CSV de 1 Mo maximum.');
+      input.value = '';
+      return;
+    }
+    this.importFile.set(file);
+    this.error.set(null);
+    this.success.set(null);
+  }
+
+  protected async analyzeImport(): Promise<void> {
+    const file = this.importFile();
+    if (file === null) {
+      this.error.set('Sélectionnez un fichier CSV à analyser.');
+      return;
+    }
+    await this.runAction(async () => {
+      this.importPreview.set(await this.adminApi.previewUserImport(file));
+    });
+  }
+
+  protected requestImport(): void {
+    if (this.importPreview()?.importable) this.importConfirmationOpen.set(true);
+  }
+
+  protected cancelImport(): void {
+    this.importConfirmationOpen.set(false);
+  }
+
+  protected async confirmImport(): Promise<void> {
+    const file = this.importFile();
+    const preview = this.importPreview();
+    if (file === null || preview === null || !preview.importable) {
+      this.importConfirmationOpen.set(false);
+      return;
+    }
+    this.importConfirmationOpen.set(false);
+    await this.runAction(async () => {
+      const result = await this.adminApi.confirmUserImport(file, preview);
+      this.users.set(await this.adminApi.findUsers());
+      this.importFile.set(null);
+      this.importPreview.set(null);
+      this.success.set(`${result.createdCount} compte(s) créé(s), ${result.updatedCount} mis à jour, ${result.unchangedCount} inchangé(s).`);
+    });
+  }
+
+  protected importActionLabel(action: UserImportAction): string {
+    return ({
+      CREATE: 'À créer',
+      UPDATE: 'À mettre à jour',
+      UNCHANGED: 'Inchangé',
+      ERROR: 'Erreur'
+    })[action];
+  }
+
   private buildRequest(): AdminUserRequest | null {
     const roles: UserRole[] = [];
     if (this.userForm.controls.admin.value) roles.push('ADMIN');
@@ -175,7 +239,7 @@ export class AdminUserPanelComponent {
   private toErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401 || error.status === 403) return 'Acces admin refuse.';
-      if (error.status === 409 && this.isBackendError(error.error)) return error.error.message;
+      if ((error.status === 400 || error.status === 409) && this.isBackendError(error.error)) return error.error.message;
       if (error.status === 404) return 'Utilisateur introuvable.';
     }
     return 'Operation utilisateur impossible pour le moment.';

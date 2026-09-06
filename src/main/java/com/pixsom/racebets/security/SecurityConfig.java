@@ -41,6 +41,7 @@ public class SecurityConfig {
                         auth.requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/providers",
                                         "/api/auth/oauth/exchange", "/api/auth/google/**", "/api/app/features", "/api/app/branding", "/api/app/branding/image", "/api/race-images/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/partners/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/word-cloud/public/live").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                 ).oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))

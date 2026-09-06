@@ -25,9 +25,18 @@ public class AppFeatureSettingsService {
 
     @Transactional
     public AppFeatureSettingsResponse update(AppFeatureSettingsRequest request) {
+        return toResponse(setActiveMode(request.activeMode()));
+    }
+
+    @Transactional
+    public void activateMode(AppMode activeMode) {
+        setActiveMode(activeMode);
+    }
+
+    private AppFeatureSettings setActiveMode(AppMode activeMode) {
         AppFeatureSettings settings = repository.findLockedById(SINGLETON_ID).orElseGet(AppFeatureSettings::new);
-        settings.setActiveMode(request.activeMode());
-        return toResponse(repository.save(settings));
+        settings.setActiveMode(activeMode);
+        return repository.save(settings);
     }
 
     @Transactional

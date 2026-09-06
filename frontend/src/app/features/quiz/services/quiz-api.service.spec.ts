@@ -58,4 +58,15 @@ describe('QuizApiService', () => {
     expect(failure).toEqual(jasmine.any(TimeoutError));
     expect(httpRequest.cancelled).toBeTrue();
   }));
+
+  it('stops an active quiz session', async () => {
+    const pending = service.stopSession(12);
+    const httpRequest = http.expectOne('/api/admin/quizzes/sessions/12/stop');
+
+    expect(httpRequest.request.method).toBe('POST');
+    expect(httpRequest.request.body).toEqual({});
+    httpRequest.flush({ phase: 'CANCELLED' });
+
+    await expectAsync(pending).toBeResolved();
+  });
 });

@@ -97,4 +97,9 @@ public class QuizAdminController {
     public QuizSessionSnapshotResponse next(@PathVariable Long sessionId) {
         return quizService.nextQuestion(sessionId);
     }
+
+    @PostMapping("/sessions/{sessionId}/stop")
+    public QuizSessionSnapshotResponse stop(@PathVariable Long sessionId) {
+        return quizService.stopSession(sessionId);
+    }
 }

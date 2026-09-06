@@ -75,6 +75,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void publicWordCloudEndpointAcceptsAnonymousRequest() throws Exception {
+        mockMvc.perform(get("/api/word-cloud/public/live"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     void adminEndpointRejectsAuthenticatedUserWithoutAdminRole() throws Exception {
         mockMvc.perform(get("/api/admin/health")
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenWithRoles(List.of("USER"))))

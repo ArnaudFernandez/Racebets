@@ -46,6 +46,18 @@ class AppFeatureSettingsServiceTest {
     }
 
     @Test
+    void activateModeUsesTheLockedSingleton() {
+        AppFeatureSettings settings = new AppFeatureSettings();
+        when(repository.findLockedById(1L)).thenReturn(Optional.of(settings));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        new AppFeatureSettingsService(repository).activateMode(AppMode.WORD_CLOUD);
+
+        assertThat(settings.getActiveMode()).isEqualTo(AppMode.WORD_CLOUD);
+        verify(repository).save(settings);
+    }
+
+    @Test
     void activeModeRequirementUsesLockedSingletonAndAllowsMatchingMode() {
         AppFeatureSettings settings = new AppFeatureSettings();
         settings.setActiveMode(AppMode.QUIZ);

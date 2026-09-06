@@ -1,4 +1,4 @@
-export type QuizSessionPhase = 'OPENING' | 'QUESTION_OPEN' | 'QUESTION_LOCKED' | 'ANSWER_REVEALED' | 'SCOREBOARD' | 'FINISHED';
+export type QuizSessionPhase = 'OPENING' | 'QUESTION_OPEN' | 'QUESTION_LOCKED' | 'ANSWER_REVEALED' | 'SCOREBOARD' | 'FINISHED' | 'CANCELLED';
 
 export interface QuizAnswerRequest {
   readonly text: string;

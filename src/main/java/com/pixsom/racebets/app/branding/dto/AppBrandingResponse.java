@@ -7,6 +7,7 @@ public record AppBrandingResponse(
         String imageUrl,
         String loginTitle,
         String loginSubtitle,
+        boolean passwordlessLoginEnabled,
         AppBrandingTheme theme
 ) {
 }

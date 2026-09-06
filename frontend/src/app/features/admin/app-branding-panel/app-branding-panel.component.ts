@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TuiButton, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
+import { TuiButton, TuiDialog, TuiInput, TuiLoader, TuiTitle } from '@taiga-ui/core';
+import { TuiSwitch } from '@taiga-ui/kit';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
 
 import { AppBrandingService } from '../../../core/branding/app-branding.service';
@@ -10,7 +11,7 @@ import { AdminApiService } from '../services/admin-api.service';
 
 @Component({
   selector: 'app-branding-panel',
-  imports: [ReactiveFormsModule, TuiButton, TuiCard, TuiHeader, TuiInput, TuiLoader, TuiTitle],
+  imports: [ReactiveFormsModule, TuiButton, TuiCard, TuiDialog, TuiHeader, TuiInput, TuiLoader, TuiSwitch, TuiTitle],
   templateUrl: './app-branding-panel.component.html',
   styleUrl: './app-branding-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -24,6 +25,9 @@ export class AppBrandingPanelComponent implements OnDestroy {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly passwordlessConfirmationOpen = signal(false);
+  private savedPasswordlessLoginEnabled = false;
+  private passwordlessEnableConfirmed = false;
 
   readonly form = new FormGroup({
     appName: new FormControl('', {
@@ -37,7 +41,8 @@ export class AppBrandingPanelComponent implements OnDestroy {
     loginSubtitle: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(300)]
-    })
+    }),
+    passwordlessLoginEnabled: new FormControl(false, { nonNullable: true })
   });
 
   constructor() {
@@ -52,10 +57,12 @@ export class AppBrandingPanelComponent implements OnDestroy {
     await this.run(async () => {
       const settings = await this.adminApi.findBranding();
       this.branding.apply(settings);
+      this.savedPasswordlessLoginEnabled = settings.passwordlessLoginEnabled;
       this.form.reset({
         appName: settings.appName,
         loginTitle: settings.loginTitle,
-        loginSubtitle: settings.loginSubtitle
+        loginSubtitle: settings.loginSubtitle,
+        passwordlessLoginEnabled: settings.passwordlessLoginEnabled
       });
       this.selectedTheme.set(settings.theme);
     }, false);
@@ -83,9 +90,34 @@ export class AppBrandingPanelComponent implements OnDestroy {
     this.branding.previewTheme(theme);
   }
 
+  protected passwordlessLoginChanged(event: Event): void {
+    const enabled = (event.target as HTMLInputElement).checked;
+    this.passwordlessEnableConfirmed = false;
+    if (enabled && !this.savedPasswordlessLoginEnabled) {
+      this.passwordlessConfirmationOpen.set(true);
+    }
+  }
+
+  protected cancelPasswordlessActivation(): void {
+    this.form.controls.passwordlessLoginEnabled.setValue(this.savedPasswordlessLoginEnabled);
+    this.passwordlessEnableConfirmed = false;
+    this.passwordlessConfirmationOpen.set(false);
+  }
+
+  protected confirmPasswordlessActivation(): void {
+    this.passwordlessEnableConfirmed = true;
+    this.passwordlessConfirmationOpen.set(false);
+  }
+
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.form.controls.passwordlessLoginEnabled.value
+        && !this.savedPasswordlessLoginEnabled
+        && !this.passwordlessEnableConfirmed) {
+      this.passwordlessConfirmationOpen.set(true);
       return;
     }
 
@@ -94,16 +126,20 @@ export class AppBrandingPanelComponent implements OnDestroy {
       data.append('appName', this.form.controls.appName.value.trim());
       data.append('loginTitle', this.form.controls.loginTitle.value.trim());
       data.append('loginSubtitle', this.form.controls.loginSubtitle.value.trim());
+      data.append('passwordlessLoginEnabled', String(this.form.controls.passwordlessLoginEnabled.value));
       data.append('theme', this.selectedTheme());
       const image = this.selectedImage();
       if (image !== null) data.append('image', image);
 
       const settings = await this.adminApi.updateBranding(data);
       this.branding.apply(settings);
+      this.savedPasswordlessLoginEnabled = settings.passwordlessLoginEnabled;
+      this.passwordlessEnableConfirmed = false;
       this.form.reset({
         appName: settings.appName,
         loginTitle: settings.loginTitle,
-        loginSubtitle: settings.loginSubtitle
+        loginSubtitle: settings.loginSubtitle,
+        passwordlessLoginEnabled: settings.passwordlessLoginEnabled
       });
       this.selectedTheme.set(settings.theme);
       this.selectedImage.set(null);

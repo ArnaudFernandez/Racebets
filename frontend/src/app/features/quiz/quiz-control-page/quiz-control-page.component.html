@@ -8,8 +8,14 @@
         <h1>{{ live.title }}</h1>
         <div class="state-line"><span class="state-dot" [class.live]="live.phase !== 'FINISHED'"></span><strong>{{ phaseLabel(live.phase) }}</strong><span>· {{ live.participantCount }} participant{{ live.participantCount > 1 ? 's' : '' }}</span></div>
       </div>
-      @if (live.phase !== 'FINISHED') { <span tuiBadge size="l" appearance="positive">Session active</span> }
-      @else { <span tuiBadge size="l" appearance="neutral">Session terminée</span> }
+      <div class="control-actions">
+        @if (live.phase !== 'FINISHED' && live.phase !== 'CANCELLED') {
+          <span tuiBadge size="l" appearance="positive">Session active</span>
+          <button tuiButton type="button" size="m" appearance="secondary-destructive" [disabled]="loading()" (click)="requestQuizStop()">Arrêter le quiz</button>
+        } @else {
+          <span tuiBadge size="l" appearance="neutral">Session terminée</span>
+        }
+      </div>
     </header>
 
     <ol class="workflow" aria-label="Déroulé du quiz">
@@ -18,7 +24,7 @@
       }
     </ol>
 
-    @if (live.phase !== 'FINISHED') {
+    @if (live.phase !== 'FINISHED' && live.phase !== 'CANCELLED') {
       <section class="workflow-advance">
         <div><span class="next-label">ÉTAPE SUIVANTE</span><strong>{{ nextActionLabel(live) }}</strong><small>{{ nextActionHint(live.phase) }}</small></div>
         @if (live.phase === 'QUESTION_OPEN') {
@@ -79,7 +85,7 @@
       </div>
     }
 
-    @if (live.phase !== 'FINISHED') {
+    @if (live.phase !== 'FINISHED' && live.phase !== 'CANCELLED') {
       <section class="workflow-advance workflow-advance-bottom">
         <div><span class="next-label">ÉTAPE SUIVANTE</span><strong>{{ nextActionLabel(live) }}</strong><small>{{ nextActionHint(live.phase) }}</small></div>
         @if (live.phase === 'QUESTION_OPEN') {
@@ -107,6 +113,20 @@
       <div class="dialog-actions">
         <button tuiButton type="button" size="m" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmEarlyStop()">Arrêter la question</button>
         <button tuiButton type="button" size="m" appearance="secondary" (click)="cancelEarlyStop()">Continuer le chrono</button>
+      </div>
+    </section>
+  </ng-template>
+  <ng-template
+    [tuiDialog]="stopQuizDialogOpen()"
+    (tuiDialogChange)="stopQuizDialogOpenChange($event)"
+    [tuiDialogOptions]="{label: 'Arrêter le quiz ?', size: 's'}"
+  >
+    <section class="quiz-stop-dialog" role="alertdialog" aria-describedby="quiz-stop-warning">
+      <p id="quiz-stop-warning">La session sera interrompue immédiatement pour tous les participants et aucun podium ne sera affiché.</p>
+      <p class="dialog-countdown">Les réponses déjà reçues seront conservées, mais le quiz ne pourra pas reprendre.</p>
+      <div class="dialog-actions">
+        <button tuiButton type="button" size="m" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmQuizStop()">Arrêter définitivement</button>
+        <button tuiButton type="button" size="m" appearance="secondary" (click)="cancelQuizStop()">Continuer le quiz</button>
       </div>
     </section>
   </ng-template>

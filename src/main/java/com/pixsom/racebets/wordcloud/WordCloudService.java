@@ -97,7 +97,7 @@ public class WordCloudService {
 
     @Transactional
     public WordCloudSnapshotResponse openQuestion(Long id) {
-        featureSettingsService.requireActiveMode(AppMode.WORD_CLOUD);
+        featureSettingsService.activateMode(AppMode.WORD_CLOUD);
         WordCloudQuestion question = findQuestionForUpdate(id);
         requireDraft(question, "A previously posed word cloud question cannot be opened again");
         if (questionRepository.existsByActiveSlotTrue()) {
@@ -175,6 +175,11 @@ public class WordCloudService {
 
     @Transactional(readOnly = true)
     public Optional<WordCloudSnapshotResponse> findAdminLive() {
+        return findLiveQuestion().map(question -> toSnapshot(question, null, true));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<WordCloudSnapshotResponse> findPublicLive() {
         return findLiveQuestion().map(question -> toSnapshot(question, null, true));
     }
 

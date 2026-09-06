@@ -54,6 +54,21 @@
           <small>300 caractères maximum.</small>
         </label>
 
+        <section class="login-policy" aria-labelledby="passwordless-login-title">
+          <div>
+            <strong id="passwordless-login-title">Connexion participant sans mot de passe</strong>
+            <small>Les participants dont l’email correspond à un compte existant seront connectés automatiquement. Les administrateurs devront toujours saisir leur mot de passe.</small>
+          </div>
+          <input
+            tuiSwitch
+            type="checkbox"
+            formControlName="passwordlessLoginEnabled"
+            aria-labelledby="passwordless-login-title"
+            [disabled]="loading()"
+            (change)="passwordlessLoginChanged($event)"
+          />
+        </section>
+
         <label class="file-field">
           <span>Image de l’application</span>
           <input
@@ -134,4 +149,22 @@
   @if (loading()) {
     <p class="loading-inline" role="status"><tui-loader size="s" /> Chargement du branding...</p>
   }
+
+
+  <ng-template
+    [tuiDialog]="passwordlessConfirmationOpen()"
+    (tuiDialogChange)="passwordlessConfirmationOpen.set($event)"
+    [tuiDialogOptions]="{label: 'Activer la connexion sans mot de passe ?', size: 's', closable: false, dismissible: false}"
+  >
+    <section class="passwordless-dialog" role="alertdialog" aria-describedby="passwordless-warning">
+      <p id="passwordless-warning"><strong>Êtes-vous sûr de vouloir effectuer cette action ?</strong></p>
+      <p>Une fois activée, la page de connexion ne demandera que l’adresse email aux participants. Si elle correspond à un compte existant, la connexion sera automatique.</p>
+      <p class="security-note">Les comptes administrateurs restent protégés par leur mot de passe.</p>
+      <p class="security-note">Le réglage sera appliqué lorsque vous enregistrerez le branding.</p>
+      <div class="dialog-actions">
+        <button tuiButton type="button" appearance="primary" (click)="confirmPasswordlessActivation()">Confirmer l’activation</button>
+        <button tuiButton type="button" appearance="secondary" (click)="cancelPasswordlessActivation()">Annuler</button>
+      </div>
+    </section>
+  </ng-template>
 </section>

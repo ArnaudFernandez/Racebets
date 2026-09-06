@@ -2,14 +2,27 @@ import { Routes } from '@angular/router';
 
 import { adminGuard } from './core/auth/admin.guard';
 import { authenticatedGuard } from './core/auth/authenticated.guard';
-import { bettingFeatureGuard, quizFeatureGuard, wordCloudFeatureGuard } from './core/features/app-feature.guard';
+import {
+  bettingFeatureGuard,
+  quizFeatureGuard,
+  wordCloudFeatureGuard
+} from './core/features/app-feature.guard';
 import { tutorialGuard } from './core/tutorial/tutorial.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () =>
-      import('./features/auth/login-page/login-page.component').then((component) => component.LoginPageComponent)
+      import('./features/auth/login-page/login-page.component').then(
+        (component) => component.LoginPageComponent
+      )
+  },
+  {
+    path: 'publicWordCloud',
+    loadComponent: () =>
+      import('./features/word-cloud/public-word-cloud-page/public-word-cloud-page.component').then(
+        (component) => component.PublicWordCloudPageComponent
+      )
   },
   {
     path: '',

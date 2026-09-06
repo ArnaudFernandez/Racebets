@@ -95,6 +95,49 @@
   padding: 0;
   border: 0;
 }
+.login-policy {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid var(--rb-line);
+  border-radius: 0.85rem;
+  background: var(--rb-panel);
+}
+.login-policy > div {
+  display: grid;
+  gap: 0.3rem;
+}
+.login-policy small {
+  max-inline-size: 34rem;
+  color: var(--rb-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.passwordless-dialog {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: min(25rem, 75vw);
+}
+.passwordless-dialog p {
+  margin: 0;
+  line-height: 1.5;
+}
+.security-note {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: var(--rb-panel);
+  color: var(--rb-muted);
+  font-size: 0.82rem;
+}
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+  margin-block-start: 0.25rem;
+}
 .theme-field legend {
   padding: 0;
   font-size: 0.86rem;
@@ -243,6 +286,19 @@
   }
   .theme-options {
     grid-template-columns: 1fr;
+  }
+  .login-policy {
+    align-items: flex-start;
+  }
+  .passwordless-dialog {
+    min-inline-size: 0;
+  }
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .dialog-actions button {
+    inline-size: 100%;
   }
   .form-actions [tuiButton] {
     inline-size: 100%;

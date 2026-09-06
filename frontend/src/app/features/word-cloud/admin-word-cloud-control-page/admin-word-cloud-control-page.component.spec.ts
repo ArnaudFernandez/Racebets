@@ -51,6 +51,8 @@ describe('AdminWordCloudControlPageComponent', () => {
     expect(rows[2].textContent).toContain('Interdit');
     expect(rows[2].classList).toContain('censored-row');
     expect((rows[2].querySelector('button') as HTMLButtonElement).disabled).toBeTrue();
+    const actions = fixture.componentInstance as unknown as { dialogCopy(action: 'open'): string };
+    expect(actions.dialogCopy('open')).toContain('Le mode Nuage de mots remplacera l’affichage en cours');
 
     fixture.destroy();
   });

@@ -97,7 +97,7 @@ export class AdminWordCloudControlPageComponent implements OnDestroy {
 
   protected dialogCopy(action: ControlAction): string {
     return ({
-      open: 'La question sera affichée et tous les participants pourront répondre.',
+      open: 'Le mode Nuage de mots remplacera l’affichage en cours, puis la question sera affichée et tous les participants pourront répondre.',
       reveal: 'Le nuage filtré deviendra immédiatement visible par tous les participants.',
       close: 'La question quittera l’écran live. Les réponses resteront consultables dans l’administration.',
       reset: 'La question reviendra à l’état brouillon. Toutes les réponses et les censures seront définitivement supprimées.',

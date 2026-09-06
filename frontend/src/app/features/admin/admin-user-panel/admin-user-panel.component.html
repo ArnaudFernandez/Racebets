@@ -19,6 +19,53 @@
     </section>
   }
 
+  <article class="import-card" tuiCardLarge="compact">
+    <header tuiHeader="body-m">
+      <hgroup tuiTitle>
+        <h2>Importer les participants</h2>
+        <p tuiSubtitle>Colonnes attendues : Email professionnel, Prénom et Nom</p>
+      </hgroup>
+    </header>
+    <div class="import-controls">
+      <label class="import-file">
+        <span>Fichier CSV</span>
+        <input type="file" accept=".csv,text/csv" [disabled]="loading()" (change)="selectImportFile($event)" />
+        <small>{{ importFile()?.name ?? 'CSV UTF-8 ou Windows-1252 · 1 Mo maximum' }}</small>
+      </label>
+      <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading() || importFile() === null" (click)="analyzeImport()">Analyser le fichier</button>
+    </div>
+
+    @if (importPreview(); as preview) {
+      <div class="import-summary" aria-label="Résumé de l’import">
+        <span class="create"><strong>{{ preview.createCount }}</strong> à créer</span>
+        <span class="update"><strong>{{ preview.updateCount }}</strong> à mettre à jour</span>
+        <span><strong>{{ preview.unchangedCount }}</strong> inchangé(s)</span>
+        <span class="error"><strong>{{ preview.errorCount }}</strong> erreur(s)</span>
+      </div>
+      <div class="import-table-wrap">
+        <table class="import-table">
+          <thead><tr><th>Ligne</th><th>Participant</th><th>Email</th><th>Action</th><th>Information</th></tr></thead>
+          <tbody>
+            @for (row of preview.rows; track row.lineNumber) {
+              <tr [class.has-error]="row.action === 'ERROR'">
+                <td>{{ row.lineNumber }}</td>
+                <td><strong>{{ row.name }} {{ row.surname }}</strong></td>
+                <td>{{ row.email }}</td>
+                <td><span class="import-action" [attr.data-action]="row.action">{{ importActionLabel(row.action) }}</span></td>
+                <td>{{ row.error ?? row.warning ?? 'Prêt' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (preview.importable) {
+        <button tuiButton type="button" size="s" [disabled]="loading()" (click)="requestImport()">Importer {{ preview.totalRows }} participant(s)</button>
+      } @else {
+        <p class="import-blocked" role="alert">Corrigez les lignes en erreur dans le CSV puis analysez à nouveau le fichier.</p>
+      }
+    }
+  </article>
+
   <section class="users-grid">
     <article tuiCardLarge="compact">
       <header tuiHeader="body-m">
@@ -107,4 +154,21 @@
       </div>
     </article>
   </section>
+
+  <ng-template
+    [tuiDialog]="importConfirmationOpen()"
+    (tuiDialogChange)="importConfirmationOpen.set($event)"
+    [tuiDialogOptions]="{label: 'Confirmer l’import des participants ?', size: 's'}"
+  >
+    @if (importPreview(); as preview) {
+      <section class="import-dialog" role="alertdialog" aria-describedby="import-confirmation-copy">
+        <p id="import-confirmation-copy">L’import va créer <strong>{{ preview.createCount }}</strong> compte(s) et en mettre <strong>{{ preview.updateCount }}</strong> à jour.</p>
+        <p>Les comptes existants conserveront leurs rôles, mots de passe et historiques. Tous les comptes du fichier seront marqués présents.</p>
+        <div class="form-actions">
+          <button tuiButton type="button" [disabled]="loading()" (click)="confirmImport()">Confirmer l’import</button>
+          <button tuiButton type="button" appearance="secondary" (click)="cancelImport()">Annuler</button>
+        </div>
+      </section>
+    }
+  </ng-template>
 </section>

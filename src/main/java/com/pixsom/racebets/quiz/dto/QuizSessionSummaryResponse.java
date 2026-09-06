@@ -9,6 +9,6 @@ public record QuizSessionSummaryResponse(
         QuizSessionPhase phase,
         int currentQuestionIndex,
         int questionCount,
-        int participantCount
+        long participantCount
 ) {
 }

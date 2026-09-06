@@ -97,6 +97,19 @@ class AuthControllerTest {
     }
 
     @Test
+    void loginAcceptsAnEmailWithoutAccessCodeForServerSidePolicyEvaluation() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenReturn(new LoginResponse("signed.jwt.token", "Bearer", 3_600_000L, Set.of(Role.USER)));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"bettor@example.com\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).login(new LoginRequest("bettor@example.com", null));
+    }
+
+    @Test
     void tutorialCompletionUsesTheAuthenticatedUserId() {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")

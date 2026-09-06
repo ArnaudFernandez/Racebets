@@ -30,6 +30,13 @@ public class WordCloudPlayerController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/public/live")
+    public ResponseEntity<WordCloudSnapshotResponse> publicLive() {
+        return service.findPublicLive()
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @PostMapping("/questions/{id}/responses")
     public WordCloudSnapshotResponse respond(
             @PathVariable Long id,

@@ -28,6 +28,36 @@ export interface AdminUserRequest {
   readonly roles: readonly UserRole[];
 }
 
+export type UserImportAction = 'CREATE' | 'UPDATE' | 'UNCHANGED' | 'ERROR';
+
+export interface UserImportRow {
+  readonly lineNumber: number;
+  readonly email: string;
+  readonly name: string;
+  readonly surname: string;
+  readonly action: UserImportAction;
+  readonly warning: string | null;
+  readonly error: string | null;
+}
+
+export interface UserImportPreview {
+  readonly fileDigest: string;
+  readonly planFingerprint: string;
+  readonly totalRows: number;
+  readonly createCount: number;
+  readonly updateCount: number;
+  readonly unchangedCount: number;
+  readonly errorCount: number;
+  readonly importable: boolean;
+  readonly rows: readonly UserImportRow[];
+}
+
+export interface UserImportResult {
+  readonly createdCount: number;
+  readonly updatedCount: number;
+  readonly unchangedCount: number;
+}
+
 export interface HorseAdminResponse {
   readonly id: number;
   readonly name: string;

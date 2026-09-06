@@ -4,6 +4,7 @@ import com.pixsom.racebets.auth.dto.LoginRequest;
 import com.pixsom.racebets.auth.dto.LoginResponse;
 import com.pixsom.racebets.auth.dto.RegisterRequest;
 import com.pixsom.racebets.auth.dto.UserProfileResponse;
+import com.pixsom.racebets.app.branding.AppBrandingService;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.enums.Role;
 import com.pixsom.racebets.repositories.AppUserRepository;
@@ -39,11 +40,14 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AppBrandingService brandingService;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(appUserRepository, jwtService, passwordEncoder);
+        authService = new AuthService(appUserRepository, jwtService, passwordEncoder, brandingService);
         ReflectionTestUtils.setField(authService, "jwtExpiration", 3_600_000L);
     }
 
@@ -112,6 +116,50 @@ class AuthServiceTest {
 
         verify(passwordEncoder).matches("WRONG", "encoded-access-code");
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void participantCanLoginWithEmailOnlyWhenEnabled() {
+        AppUser user = new AppUser();
+        user.setEmail("bettor@example.com");
+        user.setRoles(Set.of(Role.USER));
+        when(appUserRepository.findByEmail("bettor@example.com")).thenReturn(Optional.of(user));
+        when(brandingService.isPasswordlessLoginEnabled()).thenReturn(true);
+        when(jwtService.generateToken(user)).thenReturn("signed.jwt.token");
+
+        LoginResponse response = authService.login(new LoginRequest("bettor@example.com", null));
+
+        assertThat(response.token()).isEqualTo("signed.jwt.token");
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void emailOnlyLoginIsRejectedWhenDisabled() {
+        AppUser user = new AppUser();
+        user.setEmail("bettor@example.com");
+        user.setRoles(Set.of(Role.USER));
+        when(appUserRepository.findByEmail("bettor@example.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("bettor@example.com", null)))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage("Invalid credentials");
+
+        verifyNoInteractions(passwordEncoder, jwtService);
+    }
+
+    @Test
+    void administratorAlwaysNeedsAValidPassword() {
+        AppUser admin = new AppUser();
+        admin.setEmail("admin@example.com");
+        admin.setPasswordHash("encoded-access-code");
+        admin.setRoles(Set.of(Role.ADMIN));
+        when(appUserRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", null)))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage("Invalid credentials");
+
+        verifyNoInteractions(passwordEncoder, jwtService);
     }
 
     @Test

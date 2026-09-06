@@ -28,6 +28,9 @@ public class AppBrandingSettings {
     @Column(name = "login_subtitle", nullable = false, length = 300)
     private String loginSubtitle = "Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.";
 
+    @Column(name = "passwordless_login_enabled", nullable = false)
+    private boolean passwordlessLoginEnabled;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "theme", nullable = false, length = 32)
     private AppBrandingTheme theme = AppBrandingTheme.DEFAULT;

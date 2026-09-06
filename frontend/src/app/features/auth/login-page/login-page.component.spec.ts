@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { AppBrandingService } from '../../../core/branding/app-branding.service';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
 import { TutorialService } from '../../../core/tutorial/tutorial.service';
+import { PartnerService } from '../../betting/services/partner.service';
 import { LoginPageComponent } from './login-page.component';
 
 describe('LoginPageComponent', () => {
@@ -31,6 +32,7 @@ describe('LoginPageComponent', () => {
   let features: jasmine.SpyObj<AppFeaturesService>;
   let tutorial: jasmine.SpyObj<TutorialService>;
   let router: jasmine.SpyObj<Router>;
+  let partners: jasmine.SpyObj<PartnerService>;
 
   beforeEach(async () => {
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['login', 'register', 'providers', 'exchangeOAuthCode'], {
@@ -45,6 +47,8 @@ describe('LoginPageComponent', () => {
     tutorial = jasmine.createSpyObj<TutorialService>('TutorialService', ['shouldStart']);
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     router.navigateByUrl.and.resolveTo(true);
+    partners = jasmine.createSpyObj<PartnerService>('PartnerService', ['findVisible']);
+    partners.findVisible.and.resolveTo([]);
 
     await TestBed.configureTestingModule({
       imports: [LoginPageComponent],
@@ -53,6 +57,7 @@ describe('LoginPageComponent', () => {
         { provide: AuthService, useValue: auth },
         { provide: AppFeaturesService, useValue: features },
         { provide: TutorialService, useValue: tutorial },
+        { provide: PartnerService, useValue: partners },
         { provide: Router, useValue: router },
         {
           provide: ActivatedRoute,
@@ -121,6 +126,7 @@ describe('LoginPageComponent', () => {
       imageUrl: '/brand.png',
       loginTitle: 'Vibrez ensemble',
       loginSubtitle: 'Une expérience en direct.',
+      passwordlessLoginEnabled: false,
       theme: 'DEFAULT'
     });
     const fixture = TestBed.createComponent(LoginPageComponent);
@@ -128,6 +134,74 @@ describe('LoginPageComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.login-brief h1').textContent).toContain('Vibrez ensemble');
     expect(fixture.nativeElement.querySelector('.login-brief p').textContent).toContain('Une expérience en direct.');
+  });
+
+  it('renders visible partner logos below the login subtitle', async () => {
+    partners.findVisible.and.resolveTo([
+      { id: 1, name: 'Pixsom', displayOnWaiting: true, logoUrl: '/api/partners/1/logo' },
+      { id: 2, name: 'Olifan', displayOnWaiting: true, logoUrl: '/api/partners/2/logo' }
+    ]);
+    const fixture = TestBed.createComponent(LoginPageComponent);
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const brief = fixture.nativeElement.querySelector('.login-brief') as HTMLElement;
+    const logos = brief.querySelectorAll<HTMLImageElement>('.login-partners img');
+    expect(logos.length).toBe(2);
+    expect(logos[0].alt).toBe('Pixsom');
+    expect(logos[1].src).toContain('/api/partners/2/logo');
+    expect(brief.querySelector('p')?.nextElementSibling).toHaveClass('login-partners');
+  });
+
+  it('logs a participant in with email only when simplified login is enabled', async () => {
+    TestBed.inject(AppBrandingService).apply({
+      appName: 'Grand Prix',
+      imageUrl: '/brand.png',
+      loginTitle: 'Vibrez ensemble',
+      loginSubtitle: 'Une expérience en direct.',
+      passwordlessLoginEnabled: true,
+      theme: 'DEFAULT'
+    });
+    tutorial.shouldStart.and.returnValue(false);
+    const fixture = TestBed.createComponent(LoginPageComponent);
+    fixture.componentInstance.form.setValue({ email: 'camille@example.com', accessCode: '' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('input[type="password"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.admin-login-toggle').textContent).toContain('admin');
+
+    await submit(fixture.componentInstance);
+
+    expect(auth.login).toHaveBeenCalledOnceWith({ email: 'camille@example.com' });
+  });
+
+  it('reveals and requires the password for an administrator', async () => {
+    TestBed.inject(AppBrandingService).apply({
+      appName: 'Grand Prix',
+      imageUrl: '/brand.png',
+      loginTitle: 'Vibrez ensemble',
+      loginSubtitle: 'Une expérience en direct.',
+      passwordlessLoginEnabled: true,
+      theme: 'DEFAULT'
+    });
+    tutorial.shouldStart.and.returnValue(false);
+    const fixture = TestBed.createComponent(LoginPageComponent);
+    fixture.componentInstance.form.controls.email.setValue('admin@example.com');
+
+    fixture.componentInstance['useAdminLogin']();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('input[type="password"]')).not.toBeNull();
+
+    await submit(fixture.componentInstance);
+    expect(auth.login).not.toHaveBeenCalled();
+
+    fixture.componentInstance.form.controls.accessCode.setValue('admin-password');
+    await submit(fixture.componentInstance);
+    expect(auth.login).toHaveBeenCalledOnceWith({
+      email: 'admin@example.com',
+      accessCode: 'admin-password'
+    });
   });
 });
 

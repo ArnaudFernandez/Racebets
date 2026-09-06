@@ -59,7 +59,8 @@ export class AdminQuizPanelComponent {
       QUESTION_LOCKED: 'Réponses closes',
       ANSWER_REVEALED: 'Réponse révélée',
       SCOREBOARD: 'Classement',
-      FINISHED: 'Terminée'
+      FINISHED: 'Terminée',
+      CANCELLED: 'Arrêtée'
     })[phase];
   }
 

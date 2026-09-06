@@ -6,5 +6,6 @@ public enum QuizSessionPhase {
     QUESTION_LOCKED,
     ANSWER_REVEALED,
     SCOREBOARD,
-    FINISHED
+    FINISHED,
+    CANCELLED
 }

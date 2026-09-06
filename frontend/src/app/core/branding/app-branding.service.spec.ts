@@ -27,6 +27,7 @@ describe('AppBrandingService', () => {
         imageUrl: '/api/app/branding/image?v=2',
         loginTitle: 'Vibrez ensemble',
         loginSubtitle: 'Une expérience en direct.',
+        passwordlessLoginEnabled: true,
         theme: 'OLIFAN_GROUP'
       });
 
@@ -35,12 +36,14 @@ describe('AppBrandingService', () => {
       imageUrl: '/api/app/branding/image?v=2',
       loginTitle: 'Vibrez ensemble',
       loginSubtitle: 'Une expérience en direct.',
+      passwordlessLoginEnabled: true,
       theme: 'OLIFAN_GROUP'
     });
     expect(service.appName()).toBe('Hippodrome');
     expect(service.imageUrl()).toBe('/api/app/branding/image?v=2');
     expect(service.loginTitle()).toBe('Vibrez ensemble');
     expect(service.loginSubtitle()).toBe('Une expérience en direct.');
+    expect(service.passwordlessLoginEnabled()).toBeTrue();
     expect(service.theme()).toBe('OLIFAN_GROUP');
   });
 
@@ -50,6 +53,7 @@ describe('AppBrandingService', () => {
       imageUrl: '/brand.png',
       loginTitle: 'À vos marques',
       loginSubtitle: 'Participez maintenant.',
+      passwordlessLoginEnabled: false,
       theme: 'DEFAULT'
     });
 
@@ -58,6 +62,7 @@ describe('AppBrandingService', () => {
       imageUrl: '/brand.png',
       loginTitle: 'À vos marques',
       loginSubtitle: 'Participez maintenant.',
+      passwordlessLoginEnabled: false,
       theme: 'DEFAULT'
     });
   });
@@ -71,5 +76,9 @@ describe('AppBrandingService', () => {
     service.clearThemePreview();
 
     expect(service.theme()).toBe('DEFAULT');
+  });
+
+  it('keeps passwordless login disabled before public settings load', () => {
+    expect(service.passwordlessLoginEnabled()).toBeFalse();
   });
 });

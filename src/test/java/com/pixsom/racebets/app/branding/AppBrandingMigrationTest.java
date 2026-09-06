@@ -50,4 +50,23 @@ class AppBrandingMigrationTest {
                 "UPDATE app_branding_settings SET theme = 'UNKNOWN' WHERE id = 1"))
                 .isInstanceOf(RuntimeException.class);
     }
+
+    @Test
+    void migrationKeepsPasswordlessLoginDisabledForExistingBranding() {
+        DataSource dataSource = new DriverManagerDataSource(
+                "jdbc:h2:mem:branding-passwordless-login;DB_CLOSE_DELAY=-1", "sa", "");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE app_branding_settings (id BIGINT PRIMARY KEY, app_name VARCHAR(120) NOT NULL)");
+        jdbc.update("INSERT INTO app_branding_settings (id, app_name) VALUES (1, 'Racebets')");
+
+        new ResourceDatabasePopulator(new ClassPathResource(
+                "db/migration/V11__branding_passwordless_login.sql")).execute(dataSource);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT passwordless_login_enabled FROM app_branding_settings WHERE id = 1", Boolean.class))
+                .isFalse();
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE app_branding_settings SET passwordless_login_enabled = NULL WHERE id = 1"))
+                .isInstanceOf(RuntimeException.class);
+    }
 }

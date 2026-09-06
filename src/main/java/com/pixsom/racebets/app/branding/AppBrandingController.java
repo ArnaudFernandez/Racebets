@@ -38,11 +38,12 @@ public class AppBrandingController {
 
     @PutMapping(path = "/admin/app/branding", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AppBrandingResponse update(@RequestParam("appName") String appName,
-                                      @RequestParam("loginTitle") String loginTitle,
-                                      @RequestParam("loginSubtitle") String loginSubtitle,
-                                      @RequestParam("theme") AppBrandingTheme theme,
-                                      @RequestParam(value = "image", required = false) MultipartFile image) {
-        return service.update(appName, loginTitle, loginSubtitle, theme, image);
+                                       @RequestParam("loginTitle") String loginTitle,
+                                       @RequestParam("loginSubtitle") String loginSubtitle,
+                                       @RequestParam("passwordlessLoginEnabled") boolean passwordlessLoginEnabled,
+                                       @RequestParam("theme") AppBrandingTheme theme,
+                                       @RequestParam(value = "image", required = false) MultipartFile image) {
+        return service.update(appName, loginTitle, loginSubtitle, passwordlessLoginEnabled, theme, image);
     }
 
     private ResponseEntity<byte[]> imageResponse(AppBrandingImage image) {

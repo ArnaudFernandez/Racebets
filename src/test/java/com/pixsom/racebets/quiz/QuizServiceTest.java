@@ -15,6 +15,8 @@ import com.pixsom.racebets.repositories.QuizSubmissionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
@@ -63,10 +65,12 @@ class QuizServiceTest {
         when(quizSetRepository.findById(1L)).thenReturn(Optional.of(quizSet));
         when(quizSessionRepository.existsByPhaseIn(any())).thenReturn(false);
         when(quizSessionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(participantRepository.countBySession(any())).thenReturn(3L);
 
         var response = service.openSession(1L);
 
         assertThat(response.phase()).isEqualTo(QuizSessionPhase.OPENING);
+        assertThat(response.participantCount()).isEqualTo(3);
         verify(quizSessionRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(session ->
                 Boolean.TRUE.equals(session.getActiveSlot()) && session.getCurrentQuestionIndex() == -1
         ));
@@ -97,6 +101,46 @@ class QuizServiceTest {
 
         assertThat(response.phase()).isEqualTo(QuizSessionPhase.FINISHED);
         assertThat(session.getActiveSlot()).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = QuizSessionPhase.class, names = {
+            "OPENING", "QUESTION_OPEN", "QUESTION_LOCKED", "ANSWER_REVEALED", "SCOREBOARD"
+    })
+    void stoppingAnyLivePhaseCancelsTheSessionAndReleasesTheSlot(QuizSessionPhase phase) {
+        QuizSession session = new QuizSession();
+        session.setQuizSet(quizSetWithOneQuestion());
+        session.setPhase(phase);
+        session.setCurrentQuestionIndex(phase == QuizSessionPhase.OPENING ? -1 : 0);
+        session.setActiveSlot(true);
+        when(quizSessionRepository.findLockedById(9L)).thenReturn(Optional.of(session));
+
+        var response = service.stopSession(9L);
+
+        assertThat(response.phase()).isEqualTo(QuizSessionPhase.CANCELLED);
+        assertThat(session.getActiveSlot()).isNull();
+    }
+
+    @Test
+    void finishedSessionCannotBeCancelled() {
+        QuizSession session = new QuizSession();
+        session.setPhase(QuizSessionPhase.FINISHED);
+        when(quizSessionRepository.findLockedById(9L)).thenReturn(Optional.of(session));
+
+        assertThatThrownBy(() -> service.stopSession(9L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("active");
+    }
+
+    @Test
+    void participantCannotJoinCancelledSession() {
+        QuizSession session = new QuizSession();
+        session.setPhase(QuizSessionPhase.CANCELLED);
+        when(quizSessionRepository.findById(9L)).thenReturn(Optional.of(session));
+
+        assertThatThrownBy(() -> service.joinSession(9L, authentication))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("no longer active");
     }
 
     @Test

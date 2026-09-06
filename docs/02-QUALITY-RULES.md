@@ -71,6 +71,8 @@ Pour l'authentification :
 - utiliser `BadCredentialsException` pour credentials invalides ;
 - renvoyer un message generique `Invalid credentials` ;
 - ne pas permettre l'enumeration d'emails.
+- traiter la connexion par email seul comme une politique serveur desactivee par defaut et ne jamais l'appliquer aux
+  comptes administrateurs.
 
 Les exceptions REST doivent etre traduites via `@RestControllerAdvice`.
 

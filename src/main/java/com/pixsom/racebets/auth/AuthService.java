@@ -5,6 +5,7 @@ import com.pixsom.racebets.auth.dto.LoginResponse;
 import com.pixsom.racebets.auth.dto.RegisterRequest;
 import com.pixsom.racebets.auth.dto.UserProfileResponse;
 import com.pixsom.racebets.admin.ConflictException;
+import com.pixsom.racebets.app.branding.AppBrandingService;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.enums.Role;
 import com.pixsom.racebets.repositories.AppUserRepository;
@@ -25,14 +26,17 @@ public class AuthService {
     private final AppUserRepository appUserRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final AppBrandingService brandingService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public AuthService(AppUserRepository appUserRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
+    public AuthService(AppUserRepository appUserRepository, JwtService jwtService, PasswordEncoder passwordEncoder,
+                       AppBrandingService brandingService) {
         this.appUserRepository = appUserRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.brandingService = brandingService;
     }
 
 
@@ -59,7 +63,13 @@ public class AuthService {
         AppUser user = appUserRepository.findByEmail(normalizeEmail(loginRequest.email()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(loginRequest.accessCode(), user.getPasswordHash())) {
+        boolean accountRolesAreSafeForPasswordlessLogin = user.getRoles() != null
+                && !user.getRoles().contains(Role.ADMIN);
+        boolean passwordRequired = !accountRolesAreSafeForPasswordlessLogin
+                || !brandingService.isPasswordlessLoginEnabled();
+        String accessCode = loginRequest.accessCode();
+        if (passwordRequired && (accessCode == null || accessCode.isBlank()
+                || user.getPasswordHash() == null || !passwordEncoder.matches(accessCode, user.getPasswordHash()))) {
             throw new BadCredentialsException("Invalid credentials");
         }
 

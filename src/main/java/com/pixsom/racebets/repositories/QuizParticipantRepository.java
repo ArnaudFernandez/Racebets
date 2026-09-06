@@ -15,5 +15,7 @@ public interface QuizParticipantRepository extends JpaRepository<QuizParticipant
 
     List<QuizParticipant> findBySession(QuizSession session);
 
+    long countBySession(QuizSession session);
+
     void deleteBySession(QuizSession session);
 }

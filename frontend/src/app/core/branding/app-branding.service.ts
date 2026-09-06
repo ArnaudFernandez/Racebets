@@ -9,6 +9,7 @@ const DEFAULT_BRANDING: AppBrandingSettings = {
   imageUrl: '/logo_le_bouscat.png',
   loginTitle: 'Vivez la course, simplement.',
   loginSubtitle: 'Pariez en direct, suivez les résultats et retrouvez votre classement au même endroit.',
+  passwordlessLoginEnabled: false,
   theme: 'DEFAULT'
 };
 
@@ -27,6 +28,7 @@ export class AppBrandingService {
   readonly imageUrl = computed(() => this.settingsState().imageUrl);
   readonly loginTitle = computed(() => this.settingsState().loginTitle);
   readonly loginSubtitle = computed(() => this.settingsState().loginSubtitle);
+  readonly passwordlessLoginEnabled = computed(() => this.settingsState().passwordlessLoginEnabled);
   readonly theme = computed(() => this.previewThemeState() ?? this.settingsState().theme);
 
   async load(): Promise<AppBrandingSettings> {

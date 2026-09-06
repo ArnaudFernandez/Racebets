@@ -38,13 +38,14 @@ class AppBrandingControllerTest {
     void currentBrandingIsPublic() throws Exception {
         when(service.current()).thenReturn(new AppBrandingResponse(
                 "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct.",
-                AppBrandingTheme.OLIFAN_GROUP));
+                true, AppBrandingTheme.OLIFAN_GROUP));
 
         mockMvc.perform(get("/api/app/branding"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appName").value("Hippodrome"))
                 .andExpect(jsonPath("$.loginTitle").value("Vibrez ensemble"))
                 .andExpect(jsonPath("$.loginSubtitle").value("Une expérience en direct."))
+                .andExpect(jsonPath("$.passwordlessLoginEnabled").value(true))
                 .andExpect(jsonPath("$.theme").value("OLIFAN_GROUP"))
                 .andExpect(jsonPath("$.imageUrl").value("/api/app/branding/image?v=1"));
     }
@@ -53,16 +54,17 @@ class AppBrandingControllerTest {
     void updateAcceptsMultipartBranding() throws Exception {
         MockMultipartFile image = new MockMultipartFile("image", "brand.png", "image/png", new byte[]{1});
         when(service.update(eq("Hippodrome"), eq("Vibrez ensemble"), eq("Une expérience en direct."),
-                eq(AppBrandingTheme.OLIFAN_GROUP), any()))
+                eq(true), eq(AppBrandingTheme.OLIFAN_GROUP), any()))
                 .thenReturn(new AppBrandingResponse(
                         "Hippodrome", "/api/app/branding/image?v=1", "Vibrez ensemble", "Une expérience en direct.",
-                        AppBrandingTheme.OLIFAN_GROUP));
+                        true, AppBrandingTheme.OLIFAN_GROUP));
 
         mockMvc.perform(multipart("/api/admin/app/branding")
                         .file(image)
                         .param("appName", "Hippodrome")
                         .param("loginTitle", "Vibrez ensemble")
                         .param("loginSubtitle", "Une expérience en direct.")
+                        .param("passwordlessLoginEnabled", "true")
                         .param("theme", "OLIFAN_GROUP")
                         .with(request -> {
                             request.setMethod("PUT");
@@ -70,6 +72,7 @@ class AppBrandingControllerTest {
                         }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appName").value("Hippodrome"))
+                .andExpect(jsonPath("$.passwordlessLoginEnabled").value(true))
                 .andExpect(jsonPath("$.theme").value("OLIFAN_GROUP"));
     }
 
@@ -79,6 +82,7 @@ class AppBrandingControllerTest {
                         .param("appName", "Hippodrome")
                         .param("loginTitle", "Vibrez ensemble")
                         .param("loginSubtitle", "Une expérience en direct.")
+                        .param("passwordlessLoginEnabled", "false")
                         .param("theme", "olifan")
                         .with(request -> {
                             request.setMethod("PUT");

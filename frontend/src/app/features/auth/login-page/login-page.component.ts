@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TuiButton, TuiInput } from '@taiga-ui/core';
@@ -9,6 +9,8 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { AppBrandingService } from '../../../core/branding/app-branding.service';
 import { AppFeaturesService } from '../../../core/features/app-features.service';
 import { TutorialService } from '../../../core/tutorial/tutorial.service';
+import { PublicPartner } from '../../betting/models/partner.model';
+import { PartnerService } from '../../betting/services/partner.service';
 
 @Component({
   selector: 'app-login-page',
@@ -26,12 +28,18 @@ export class LoginPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly tutorial = inject(TutorialService);
+  private readonly partnerService = inject(PartnerService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly mode = signal<'login' | 'register'>('login');
   readonly googleAvailable = signal(false);
   readonly googleLinkCode = signal<string | null>(null);
+  readonly partners = signal<readonly PublicPartner[]>([]);
+  readonly adminLogin = signal(false);
+  readonly passwordRequired = computed(
+    () => !this.branding.passwordlessLoginEnabled() || this.adminLogin()
+  );
 
   readonly form = new FormGroup({
     email: new FormControl('', {
@@ -40,7 +48,7 @@ export class LoginPageComponent {
     }),
     accessCode: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required]
+      validators: [Validators.maxLength(128)]
     })
   });
 
@@ -72,15 +80,29 @@ export class LoginPageComponent {
 
   constructor() {
     void this.initializeGoogleAuthentication();
+    void this.loadPartners();
   }
 
   protected setMode(mode: 'login' | 'register'): void {
     this.mode.set(mode);
+    this.adminLogin.set(false);
+    this.error.set(null);
+  }
+
+  protected useAdminLogin(): void {
+    this.adminLogin.set(true);
+    this.error.set(null);
+  }
+
+  protected useParticipantLogin(): void {
+    this.adminLogin.set(false);
+    this.form.controls.accessCode.reset();
     this.error.set(null);
   }
 
   protected async submit(): Promise<void> {
-    if (this.form.invalid) {
+    const accessCode = this.form.controls.accessCode.value;
+    if (this.form.invalid || (this.passwordRequired() && accessCode.trim().length === 0)) {
       this.form.markAllAsTouched();
       return;
     }
@@ -89,10 +111,8 @@ export class LoginPageComponent {
     this.error.set(null);
 
     try {
-      await this.auth.login({
-        email: this.form.controls.email.value.trim(),
-        accessCode: this.form.controls.accessCode.value
-      });
+      const email = this.form.controls.email.value.trim();
+      await this.auth.login(this.passwordRequired() ? { email, accessCode } : { email });
 
       await this.navigateAfterAuthentication();
     } catch (error: unknown) {
@@ -214,6 +234,14 @@ export class LoginPageComponent {
       this.googleAvailable.set((await this.auth.providers()).google);
     } catch {
       this.googleAvailable.set(false);
+    }
+  }
+
+  private async loadPartners(): Promise<void> {
+    try {
+      this.partners.set(await this.partnerService.findVisible());
+    } catch {
+      this.partners.set([]);
     }
   }
 

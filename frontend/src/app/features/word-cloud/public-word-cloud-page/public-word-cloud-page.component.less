@@ -1,0 +1,132 @@
+:host {
+  display: block;
+}
+
+.public-cloud-page {
+  min-block-size: 100dvh;
+  overflow: hidden;
+}
+
+.live-stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vh, 3.5rem);
+  width: min(100%, 100rem);
+  min-block-size: 100dvh;
+  padding: clamp(1.5rem, 4vw, 4.5rem);
+  margin: auto;
+}
+
+.question-heading h1,
+.waiting-stage h1 {
+  margin: 0;
+  font-family: var(--rb-font-display);
+  font-size: clamp(2.4rem, 6vw, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.question-heading h1 {
+  max-inline-size: 20ch;
+}
+
+.cloud-field {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.8rem, 2.5vw, 2.8rem) clamp(1rem, 3.5vw, 4rem);
+  align-content: center;
+  align-items: baseline;
+  justify-content: center;
+  min-block-size: 22rem;
+  padding: clamp(2rem, 6vw, 6rem);
+  border-radius: 48% 52% 46% 54% / 55% 44% 56% 45%;
+  background: color-mix(in srgb, var(--rb-brand-soft) 72%, var(--rb-paper-strong));
+  isolation: isolate;
+}
+
+.cloud-field::before,
+.cloud-field::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--rb-brand) 18%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.cloud-field::before {
+  inset: 8% 4% 16% 12%;
+  transform: rotate(-4deg);
+}
+
+.cloud-field::after {
+  inset: 17% 14% 7% 5%;
+  transform: rotate(3deg);
+}
+
+.cloud-word {
+  display: inline-block;
+  max-inline-size: 100%;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-shadow: 0 0.08em 0 color-mix(in srgb, var(--rb-paper-strong) 70%, transparent);
+  animation: word-arrival 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cloud-word:nth-child(3n + 1) {
+  animation-delay: 0.06s;
+}
+
+.cloud-word:nth-child(3n + 2) {
+  animation-delay: 0.12s;
+}
+
+.waiting-stage {
+  display: grid;
+  min-block-size: 100dvh;
+  padding: 2rem;
+  place-items: center;
+  text-align: center;
+}
+
+.waiting-stage h1 {
+  max-inline-size: 14ch;
+}
+
+@keyframes word-arrival {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem) scale(0.96);
+  }
+}
+
+@media (max-width: 38rem) {
+  .live-stage {
+    gap: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .question-heading h1,
+  .waiting-stage h1 {
+    font-size: clamp(2.1rem, 11vw, 3.5rem);
+  }
+
+  .cloud-field {
+    gap: 1.1rem 1.35rem;
+    min-block-size: 24rem;
+    padding: 2.5rem 1.25rem;
+    border-radius: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-word {
+    animation: none;
+  }
+}

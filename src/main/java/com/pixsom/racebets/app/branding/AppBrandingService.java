@@ -37,7 +37,8 @@ public class AppBrandingService {
 
     @Transactional
     public AppBrandingResponse update(String appName, String loginTitle, String loginSubtitle,
-                                      AppBrandingTheme theme, MultipartFile image) {
+                                      boolean passwordlessLoginEnabled, AppBrandingTheme theme,
+                                      MultipartFile image) {
         AppBrandingSettings settings = repository.findLockedById(SINGLETON_ID).orElseGet(AppBrandingSettings::new);
         if (theme == null) {
             throw new BadRequestException("Le thème de l'application est obligatoire.");
@@ -48,6 +49,7 @@ public class AppBrandingService {
                 loginTitle, 160, "Le titre de connexion est obligatoire et limité à 160 caractères."));
         settings.setLoginSubtitle(normalizeRequiredText(
                 loginSubtitle, 300, "Le sous-titre de connexion est obligatoire et limité à 300 caractères."));
+        settings.setPasswordlessLoginEnabled(passwordlessLoginEnabled);
         settings.setTheme(theme);
         if (image != null && !image.isEmpty()) {
             applyImage(settings, image);
@@ -60,6 +62,13 @@ public class AppBrandingService {
         return repository.findById(SINGLETON_ID)
                 .filter(settings -> settings.getImageData() != null && settings.getImageData().length > 0)
                 .map(settings -> new AppBrandingImage(settings.getImageContentType(), settings.getImageData()));
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isPasswordlessLoginEnabled() {
+        return repository.findById(SINGLETON_ID)
+                .map(AppBrandingSettings::isPasswordlessLoginEnabled)
+                .orElse(false);
     }
 
     private String normalizeRequiredText(String value, int maxLength, String errorMessage) {
@@ -92,6 +101,7 @@ public class AppBrandingService {
                 imageUrl,
                 settings.getLoginTitle() == null ? DEFAULT_LOGIN_TITLE : settings.getLoginTitle(),
                 settings.getLoginSubtitle() == null ? DEFAULT_LOGIN_SUBTITLE : settings.getLoginSubtitle(),
+                settings.isPasswordlessLoginEnabled(),
                 settings.getTheme() == null ? AppBrandingTheme.DEFAULT : settings.getTheme()
         );
     }
