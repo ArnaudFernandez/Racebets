@@ -4,9 +4,15 @@ import com.pixsom.racebets.admin.ConflictException;
 import com.pixsom.racebets.admin.NotFoundException;
 import com.pixsom.racebets.admin.user.dto.AdminUserRequest;
 import com.pixsom.racebets.admin.user.dto.AdminUserResponse;
+import com.pixsom.racebets.auth.google.OAuthIdentityRepository;
+import com.pixsom.racebets.auth.google.OAuthLoginCodeRepository;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.enums.Role;
 import com.pixsom.racebets.repositories.AppUserRepository;
+import com.pixsom.racebets.repositories.BetRepository;
+import com.pixsom.racebets.repositories.QuizParticipantRepository;
+import com.pixsom.racebets.repositories.QuizSubmissionRepository;
+import com.pixsom.racebets.repositories.WordCloudResponseRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,10 +27,30 @@ public class UserAdminService {
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BetRepository betRepository;
+    private final QuizParticipantRepository quizParticipantRepository;
+    private final QuizSubmissionRepository quizSubmissionRepository;
+    private final WordCloudResponseRepository wordCloudResponseRepository;
+    private final OAuthIdentityRepository oAuthIdentityRepository;
+    private final OAuthLoginCodeRepository oAuthLoginCodeRepository;
 
-    public UserAdminService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder) {
+    public UserAdminService(
+            AppUserRepository appUserRepository,
+            PasswordEncoder passwordEncoder,
+            BetRepository betRepository,
+            QuizParticipantRepository quizParticipantRepository,
+            QuizSubmissionRepository quizSubmissionRepository,
+            WordCloudResponseRepository wordCloudResponseRepository,
+            OAuthIdentityRepository oAuthIdentityRepository,
+            OAuthLoginCodeRepository oAuthLoginCodeRepository) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.betRepository = betRepository;
+        this.quizParticipantRepository = quizParticipantRepository;
+        this.quizSubmissionRepository = quizSubmissionRepository;
+        this.wordCloudResponseRepository = wordCloudResponseRepository;
+        this.oAuthIdentityRepository = oAuthIdentityRepository;
+        this.oAuthLoginCodeRepository = oAuthLoginCodeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +110,15 @@ public class UserAdminService {
         if (isLastAdmin(user)) {
             throw new ConflictException("The last admin account cannot be deleted");
         }
+
+        oAuthLoginCodeRepository.deleteAllByUserId(id);
+        oAuthIdentityRepository.deleteAllByUserId(id);
+        wordCloudResponseRepository.deleteAllByUserId(id);
+        quizSubmissionRepository.deleteAllByUserId(id);
+        quizParticipantRepository.deleteAllByUserId(id);
+        betRepository.deleteAllByUserId(id);
         appUserRepository.delete(user);
+        appUserRepository.flush();
     }
 
     private void applyRequest(AppUser user, AdminUserRequest request, String email) {

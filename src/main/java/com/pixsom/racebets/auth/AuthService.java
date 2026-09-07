@@ -27,16 +27,18 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AppBrandingService brandingService;
+    private final AuthAttemptLimiter attemptLimiter;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     public AuthService(AppUserRepository appUserRepository, JwtService jwtService, PasswordEncoder passwordEncoder,
-                       AppBrandingService brandingService) {
+                       AppBrandingService brandingService, AuthAttemptLimiter attemptLimiter) {
         this.appUserRepository = appUserRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.brandingService = brandingService;
+        this.attemptLimiter = attemptLimiter;
     }
 
 
@@ -60,7 +62,9 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest loginRequest) {
-        AppUser user = appUserRepository.findByEmail(normalizeEmail(loginRequest.email()))
+        String email = normalizeEmail(loginRequest.email());
+        attemptLimiter.acquire(email);
+        AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
         boolean accountRolesAreSafeForPasswordlessLogin = user.getRoles() != null
@@ -73,6 +77,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid credentials");
         }
 
+        attemptLimiter.recordSuccess(email);
         return tokenResponse(user);
     }
 

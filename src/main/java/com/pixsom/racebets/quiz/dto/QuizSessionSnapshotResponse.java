@@ -20,7 +20,7 @@ public record QuizSessionSnapshotResponse(
         Long selectedAnswerId,
         Long correctAnswerId,
         long submittedAnswers,
-        QuizQuestionResponse currentQuestion,
+        QuizLiveQuestionResponse currentQuestion,
         List<QuizScoreResponse> scores
 ) {
 }

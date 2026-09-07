@@ -1,0 +1,16 @@
+{
+  "name": "racebets-quiz-image-optimizer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "optimize": "node optimize-quiz-images.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "sharp": "0.35.4"
+  }
+}

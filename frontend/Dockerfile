@@ -13,6 +13,7 @@ FROM nginx:1.29.8-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e5919
 
 ENV BACKEND_URL=http://backend:8080 \
     OLIFAN_REDIRECT_URL=https://olifan.pixsom.fr \
+    TRUSTED_PROXY_CIDR=127.0.0.1/32 \
     NGINX_ENVSUBST_OUTPUT_DIR=/tmp
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf

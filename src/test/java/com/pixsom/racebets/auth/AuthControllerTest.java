@@ -7,6 +7,7 @@ import com.pixsom.racebets.enums.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.web.servlet.MockMvc;
@@ -94,6 +95,20 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("bettor@example.com", "WRONG"))))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginReturnsTooManyRequestsWithRetryAfter() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new AuthRateLimitExceededException(42));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("bettor@example.com", "WRONG"))))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string(HttpHeaders.RETRY_AFTER, "42"))
+                .andExpect(jsonPath("$.code").value("AUTH_RATE_LIMITED"));
     }
 
     @Test

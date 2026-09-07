@@ -1,4 +1,15 @@
-limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/s;
+map $uri $auth_capacity_key {
+    default "";
+    ~^/api/auth/ "auth";
+}
+limit_req_zone $auth_capacity_key zone=auth_capacity:1m rate=50r/s;
+limit_req_zone $binary_remote_addr zone=auth_client:10m rate=5r/s;
+
+# Secure default: forwarded client addresses are ignored until Dokploy is
+# configured with the exact private CIDR used exclusively by Traefik.
+set_real_ip_from ${TRUSTED_PROXY_CIDR};
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
 map $http_x_forwarded_proto $forwarded_proto {
     default $http_x_forwarded_proto;
     "" $scheme;
@@ -22,12 +33,15 @@ server {
     add_header X-Frame-Options "DENY" always;
 
     location /api/auth/ {
-        limit_req zone=auth_limit burst=10 nodelay;
+        limit_req zone=auth_capacity burst=400 nodelay;
+        limit_req zone=auth_client burst=400 nodelay;
+        limit_req_status 429;
+        client_max_body_size 8k;
         proxy_pass ${BACKEND_URL};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $forwarded_proto;
         proxy_set_header Connection "";
         proxy_read_timeout 60s;
@@ -38,7 +52,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $forwarded_proto;
         proxy_set_header Connection "";
         proxy_read_timeout 60s;

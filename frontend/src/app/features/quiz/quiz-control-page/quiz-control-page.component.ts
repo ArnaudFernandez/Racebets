@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TuiButton, TuiDialog, TuiLoader } from '@taiga-ui/core';
 import { TuiBadge } from '@taiga-ui/kit';
 
+import { SecureImageDirective } from '../../../shared/secure-image/secure-image.directive';
 import { QuizAnswerResponse, QuizSessionPhase, QuizSessionSnapshotResponse } from '../models/quiz-api.model';
 import { QuizApiService } from '../services/quiz-api.service';
 
@@ -13,7 +14,7 @@ interface BackendErrorResponse {
 
 @Component({
   selector: 'app-quiz-control-page',
-  imports: [RouterLink, TuiBadge, TuiButton, TuiDialog, TuiLoader],
+  imports: [RouterLink, SecureImageDirective, TuiBadge, TuiButton, TuiDialog, TuiLoader],
   templateUrl: './quiz-control-page.component.html',
   styleUrl: './quiz-control-page.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush

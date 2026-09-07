@@ -18,6 +18,7 @@ import { TuiAvatar, TuiInitialsPipe, TuiProgress } from '@taiga-ui/kit';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PublicPartner } from '../../betting/models/partner.model';
 import { PartnerService } from '../../betting/services/partner.service';
+import { SecureImageDirective } from '../../../shared/secure-image/secure-image.directive';
 import {
   QuizAnswerResponse,
   QuizScoreResponse,
@@ -29,7 +30,7 @@ import { QuizApiService } from '../services/quiz-api.service';
 
 @Component({
   selector: 'app-quiz-play-page',
-  imports: [TuiAvatar, TuiButton, TuiDialog, TuiIcon, TuiInitialsPipe, TuiLoader, TuiProgress],
+  imports: [SecureImageDirective, TuiAvatar, TuiButton, TuiDialog, TuiIcon, TuiInitialsPipe, TuiLoader, TuiProgress],
   templateUrl: './quiz-play-page.component.html',
   styleUrls: ['./quiz-play-page.component.less', './quiz-podium.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -222,7 +223,11 @@ export class QuizPlayPageComponent implements OnInit, OnDestroy {
     this.answeringId.set(answerId);
     this.error.set(null);
     try {
-      this.applySnapshot(await this.quizApi.answer(snapshot.id, answerId));
+      const submission = await this.quizApi.answer(snapshot.id, answerId);
+      if (submission.selectedAnswerId !== answerId) {
+        this.optimisticAnswerId.set(null);
+        await this.refresh();
+      }
     } catch (error: unknown) {
       this.optimisticAnswerId.set(null);
       this.error.set(this.toErrorMessage(error));

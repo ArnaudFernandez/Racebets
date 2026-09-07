@@ -8,7 +8,9 @@ import com.pixsom.racebets.quiz.dto.QuizAnswerRequest;
 import com.pixsom.racebets.quiz.dto.QuizQuestionRequest;
 import com.pixsom.racebets.quiz.dto.QuizSetRequest;
 import com.pixsom.racebets.repositories.AppUserRepository;
+import com.pixsom.racebets.repositories.QuizAnswerRepository;
 import com.pixsom.racebets.repositories.QuizParticipantRepository;
+import com.pixsom.racebets.repositories.QuizQuestionRepository;
 import com.pixsom.racebets.repositories.QuizSessionRepository;
 import com.pixsom.racebets.repositories.QuizSetRepository;
 import com.pixsom.racebets.repositories.QuizSubmissionRepository;
@@ -39,6 +41,8 @@ class QuizServiceTest {
 
     @Mock QuizSetRepository quizSetRepository;
     @Mock QuizSessionRepository quizSessionRepository;
+    @Mock QuizQuestionRepository questionRepository;
+    @Mock QuizAnswerRepository answerRepository;
     @Mock QuizParticipantRepository participantRepository;
     @Mock QuizSubmissionRepository submissionRepository;
     @Mock AppUserRepository appUserRepository;
@@ -52,6 +56,8 @@ class QuizServiceTest {
         service = new QuizService(
                 quizSetRepository,
                 quizSessionRepository,
+                questionRepository,
+                answerRepository,
                 participantRepository,
                 submissionRepository,
                 appUserRepository,
@@ -136,9 +142,9 @@ class QuizServiceTest {
     void participantCannotJoinCancelledSession() {
         QuizSession session = new QuizSession();
         session.setPhase(QuizSessionPhase.CANCELLED);
-        when(quizSessionRepository.findById(9L)).thenReturn(Optional.of(session));
+        when(quizSessionRepository.findReadLockedById(9L)).thenReturn(Optional.of(session));
 
-        assertThatThrownBy(() -> service.joinSession(9L, authentication))
+        assertThatThrownBy(() -> service.joinSession(9L, 42L))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("no longer active");
     }
@@ -157,13 +163,15 @@ class QuizServiceTest {
         existing.setAnswer(firstAnswer);
         existing.setCorrect(true);
 
-        when(quizSessionRepository.findLockedById(3L)).thenReturn(Optional.of(session));
-        when(authentication.getName()).thenReturn("player@example.test");
-        when(appUserRepository.findByEmail("player@example.test")).thenReturn(Optional.of(user));
-        when(participantRepository.existsBySessionAndUser(session, user)).thenReturn(true);
-        when(submissionRepository.findBySessionAndQuestionAndUser(session, question, user)).thenReturn(Optional.of(existing));
+        QuizParticipant participant = new QuizParticipant();
+        participant.setSession(session);
+        participant.setUser(user);
+        when(quizSessionRepository.findReadLockedById(3L)).thenReturn(Optional.of(session));
+        when(participantRepository.findLockedBySessionIdAndUserId(3L, 7L)).thenReturn(Optional.of(participant));
+        when(submissionRepository.findBySession_IdAndQuestion_IdAndUser_Id(3L, question.getId(), 7L))
+                .thenReturn(Optional.of(existing));
 
-        service.submitAnswer(3L, secondAnswer.getId(), authentication);
+        service.submitAnswer(3L, secondAnswer.getId(), 7L);
 
         verify(featureSettingsService).requireActiveMode(AppMode.QUIZ);
         assertThat(existing.getAnswer()).isSameAs(secondAnswer);
@@ -176,24 +184,26 @@ class QuizServiceTest {
         org.mockito.Mockito.doThrow(new ConflictException("Application mode QUIZ is not active"))
                 .when(featureSettingsService).requireActiveMode(AppMode.QUIZ);
 
-        assertThatThrownBy(() -> service.submitAnswer(3L, 10L, authentication))
+        assertThatThrownBy(() -> service.submitAnswer(3L, 10L, 7L))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("not active");
-        verify(quizSessionRepository, never()).findLockedById(any());
+        verify(quizSessionRepository, never()).findReadLockedById(any());
     }
 
     @Test
-    void answerAtOrAfterDeadlineIsNotSavedAndLocksQuestion() {
+    void answerAtOrAfterDeadlineIsNotSavedWhileSchedulerOwnsThePhaseTransition() {
         QuizSession session = openQuestionSession(Instant.now().minusSeconds(31));
         AppUser user = new AppUser();
-        when(quizSessionRepository.findLockedById(4L)).thenReturn(Optional.of(session));
-        when(authentication.getName()).thenReturn("late@example.test");
-        when(appUserRepository.findByEmail("late@example.test")).thenReturn(Optional.of(user));
-        when(participantRepository.existsBySessionAndUser(session, user)).thenReturn(true);
+        QuizParticipant participant = new QuizParticipant();
+        participant.setSession(session);
+        participant.setUser(user);
+        when(quizSessionRepository.findReadLockedById(4L)).thenReturn(Optional.of(session));
+        when(participantRepository.findLockedBySessionIdAndUserId(4L, 7L)).thenReturn(Optional.of(participant));
 
-        var response = service.submitAnswer(4L, 10L, authentication);
+        var response = service.submitAnswer(4L, 10L, 7L);
 
-        assertThat(response.phase()).isEqualTo(QuizSessionPhase.QUESTION_LOCKED);
+        assertThat(response.selectedAnswerId()).isNull();
+        assertThat(response.phase()).isEqualTo(QuizSessionPhase.QUESTION_OPEN);
         verify(submissionRepository, never()).save(any());
     }
 

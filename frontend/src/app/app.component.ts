@@ -56,6 +56,13 @@ export class AppComponent {
     });
     this.features.startWatching();
     effect(() => {
+      if (this.auth.isAuthenticated() && this.features.bettingEnabled()) {
+        this.bettingApi.startWatching();
+      } else {
+        this.bettingApi.stopWatching();
+      }
+    });
+    effect(() => {
       if (this.auth.session() === null || !this.features.bettingEnabled()) {
         this.betHistory.clearAvailability();
       } else {

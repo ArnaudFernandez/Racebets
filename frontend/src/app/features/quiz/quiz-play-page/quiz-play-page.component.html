@@ -217,13 +217,13 @@
             ></progress>
           }
 
-          <section class="question-board" [class.has-media]="question.questionImageDataUrl">
+          <section class="question-board" [class.has-media]="question.questionImageUrl">
             <div class="question-copy">
               <h1>{{ question.text }}</h1>
             </div>
-            @if (question.questionImageDataUrl) {
+            @if (question.questionImageUrl) {
               <figure class="question-media">
-                <img [src]="question.questionImageDataUrl" alt="Illustration de la question" />
+                <img [appSecureImage]="question.questionImageUrl" alt="Illustration de la question" />
               </figure>
             }
           </section>
@@ -283,10 +283,10 @@
             </div>
           </header>
 
-          <div class="reveal-content" [class.has-media]="question.answerImageDataUrl">
-            @if (question.answerImageDataUrl) {
+          <div class="reveal-content" [class.has-media]="question.answerImageUrl">
+            @if (question.answerImageUrl) {
               <figure class="answer-media">
-                <img [src]="question.answerImageDataUrl" alt="Illustration de la réponse" />
+                <img [appSecureImage]="question.answerImageUrl" alt="Illustration de la réponse" />
               </figure>
             }
             <div class="correction-panel">

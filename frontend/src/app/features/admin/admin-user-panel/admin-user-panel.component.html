@@ -6,19 +6,6 @@
     <p class="message success" role="status">{{ message }}</p>
   }
 
-  @if (deleteTarget(); as user) {
-    <section class="confirm-panel" tuiCardLarge="compact" role="alertdialog" aria-labelledby="delete-user-title">
-      <div>
-        <h2 id="delete-user-title">Supprimer ce compte ?</h2>
-        <p>{{ user.email }}</p>
-      </div>
-      <div class="form-actions">
-        <button tuiButton type="button" size="s" appearance="secondary-destructive" [disabled]="loading()" (click)="confirmDelete()">Supprimer</button>
-        <button tuiButton type="button" size="s" appearance="secondary" (click)="cancelDelete()">Annuler</button>
-      </div>
-    </section>
-  }
-
   <article class="import-card" tuiCardLarge="compact">
     <header tuiHeader="body-m">
       <hgroup tuiTitle>
@@ -29,29 +16,65 @@
     <div class="import-controls">
       <label class="import-file">
         <span>Fichier CSV</span>
-        <input type="file" accept=".csv,text/csv" [disabled]="loading()" (change)="selectImportFile($event)" />
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          [disabled]="loading()"
+          (change)="selectImportFile($event)"
+        />
         <small>{{ importFile()?.name ?? 'CSV UTF-8 ou Windows-1252 · 1 Mo maximum' }}</small>
       </label>
-      <button tuiButton type="button" size="s" appearance="secondary" [disabled]="loading() || importFile() === null" (click)="analyzeImport()">Analyser le fichier</button>
+      <button
+        tuiButton
+        type="button"
+        size="s"
+        appearance="secondary"
+        [disabled]="loading() || importFile() === null"
+        (click)="analyzeImport()"
+      >
+        Analyser le fichier
+      </button>
     </div>
 
     @if (importPreview(); as preview) {
       <div class="import-summary" aria-label="Résumé de l’import">
-        <span class="create"><strong>{{ preview.createCount }}</strong> à créer</span>
-        <span class="update"><strong>{{ preview.updateCount }}</strong> à mettre à jour</span>
-        <span><strong>{{ preview.unchangedCount }}</strong> inchangé(s)</span>
-        <span class="error"><strong>{{ preview.errorCount }}</strong> erreur(s)</span>
+        <span class="create"
+          ><strong>{{ preview.createCount }}</strong> à créer</span
+        >
+        <span class="update"
+          ><strong>{{ preview.updateCount }}</strong> à mettre à jour</span
+        >
+        <span
+          ><strong>{{ preview.unchangedCount }}</strong> inchangé(s)</span
+        >
+        <span class="error"
+          ><strong>{{ preview.errorCount }}</strong> erreur(s)</span
+        >
       </div>
       <div class="import-table-wrap">
         <table class="import-table">
-          <thead><tr><th>Ligne</th><th>Participant</th><th>Email</th><th>Action</th><th>Information</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Ligne</th>
+              <th>Participant</th>
+              <th>Email</th>
+              <th>Action</th>
+              <th>Information</th>
+            </tr>
+          </thead>
           <tbody>
             @for (row of preview.rows; track row.lineNumber) {
               <tr [class.has-error]="row.action === 'ERROR'">
                 <td>{{ row.lineNumber }}</td>
-                <td><strong>{{ row.name }} {{ row.surname }}</strong></td>
+                <td>
+                  <strong>{{ row.name }} {{ row.surname }}</strong>
+                </td>
                 <td>{{ row.email }}</td>
-                <td><span class="import-action" [attr.data-action]="row.action">{{ importActionLabel(row.action) }}</span></td>
+                <td>
+                  <span class="import-action" [attr.data-action]="row.action">{{
+                    importActionLabel(row.action)
+                  }}</span>
+                </td>
                 <td>{{ row.error ?? row.warning ?? 'Prêt' }}</td>
               </tr>
             }
@@ -59,9 +82,13 @@
         </table>
       </div>
       @if (preview.importable) {
-        <button tuiButton type="button" size="s" [disabled]="loading()" (click)="requestImport()">Importer {{ preview.totalRows }} participant(s)</button>
+        <button tuiButton type="button" size="s" [disabled]="loading()" (click)="requestImport()">
+          Importer {{ preview.totalRows }} participant(s)
+        </button>
       } @else {
-        <p class="import-blocked" role="alert">Corrigez les lignes en erreur dans le CSV puis analysez à nouveau le fichier.</p>
+        <p class="import-blocked" role="alert">
+          Corrigez les lignes en erreur dans le CSV puis analysez à nouveau le fichier.
+        </p>
       }
     }
   </article>
@@ -81,7 +108,12 @@
             <input tuiInput formControlName="name" placeholder="Prénom" autocomplete="given-name" />
           </tui-textfield>
           <tui-textfield>
-            <input tuiInput formControlName="surname" placeholder="Nom" autocomplete="family-name" />
+            <input
+              tuiInput
+              formControlName="surname"
+              placeholder="Nom"
+              autocomplete="family-name"
+            />
           </tui-textfield>
         </div>
 
@@ -90,11 +122,27 @@
         </tui-textfield>
 
         <tui-textfield>
-          <input tuiInput formControlName="email" type="email" placeholder="Email" autocomplete="username" />
+          <input
+            tuiInput
+            formControlName="email"
+            type="email"
+            placeholder="Email"
+            autocomplete="username"
+          />
         </tui-textfield>
 
         <tui-textfield>
-          <input tuiInput formControlName="accessCode" type="password" [placeholder]="editingUserId() === null ? 'Code d’accès obligatoire' : 'Nouveau code d’accès optionnel'" autocomplete="new-password" />
+          <input
+            tuiInput
+            formControlName="accessCode"
+            type="password"
+            [placeholder]="
+              editingUserId() === null
+                ? 'Code d’accès obligatoire'
+                : 'Nouveau code d’accès optionnel'
+            "
+            autocomplete="new-password"
+          />
         </tui-textfield>
 
         <label class="check-row">
@@ -110,63 +158,222 @@
         </fieldset>
 
         <div class="form-actions">
-          <button tuiButton type="submit" size="s" [disabled]="loading()">{{ editingUserId() === null ? 'Créer' : 'Enregistrer' }}</button>
-          <button tuiButton type="button" size="s" appearance="secondary" (click)="reset()">Réinitialiser</button>
+          <button tuiButton type="submit" size="s" [disabled]="loading()">
+            {{ editingUserId() === null ? 'Créer' : 'Enregistrer' }}
+          </button>
+          <button tuiButton type="button" size="s" appearance="secondary" (click)="reset()">
+            Réinitialiser
+          </button>
         </div>
       </form>
     </article>
 
-    <article tuiCardLarge="compact">
+    <article class="user-list" tuiCardLarge="compact">
       <header tuiHeader="body-m">
         <hgroup tuiTitle>
           <h2>Utilisateurs</h2>
-          <p tuiSubtitle>{{ users().length }} compte(s)</p>
+          <p tuiSubtitle>{{ users().length }} compte(s) enregistrés</p>
         </hgroup>
-        <button tuiButton type="button" size="s" appearance="secondary" (click)="refresh()">Actualiser</button>
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          appearance="secondary"
+          iconStart="@tui.refresh-cw"
+          [disabled]="loading()"
+          (click)="refresh()"
+        >
+          Actualiser
+        </button>
       </header>
 
-      <div class="table-wrap">
-        <table tuiTable size="m">
-          <thead>
-            <tr><th tuiTh>Nom</th><th tuiTh>Email</th><th tuiTh>Roles</th><th tuiTh>Etat</th><th tuiTh>Actions</th></tr>
-          </thead>
-          <tbody tuiTbody>
-            @for (user of users(); track user.id) {
-              <tr>
-                <td tuiTd data-label="Nom">{{ user.name }} {{ user.surname }}</td>
-                <td tuiTd data-label="Email">{{ user.email }}</td>
-                <td tuiTd data-label="Roles">
-                  @for (role of user.roles; track role) {
-                    <span tuiBadge size="s" appearance="neutral" class="role-badge">{{ role }}</span>
-                  }
-                </td>
-                <td tuiTd data-label="Etat"><span tuiBadge size="s" [appearance]="user.present ? 'positive' : 'neutral'">{{ user.present ? 'Present' : 'Absent' }}</span></td>
-                <td tuiTd class="row-actions" data-label="Actions">
-                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="edit(user)">Editer</button>
-                  <button tuiButton type="button" size="xs" appearance="secondary-destructive" (click)="requestDelete(user)">Supprimer</button>
-                </td>
-              </tr>
-            } @empty {
-              <tr><td tuiTd colspan="5" class="empty">Aucun utilisateur.</td></tr>
-            }
-          </tbody>
-        </table>
+      <div class="user-list-toolbar">
+        <tui-textfield class="user-search" iconStart="@tui.search">
+          <label tuiLabel for="admin-user-search">Rechercher un utilisateur</label>
+          <input
+            id="admin-user-search"
+            tuiInput
+            type="search"
+            autocomplete="off"
+            placeholder="Nom, prénom ou adresse email"
+            [formControl]="searchControl"
+          />
+        </tui-textfield>
+        <p class="result-count" role="status" aria-live="polite">
+          @if (searchQuery()) {
+            <strong>{{ filteredUsers().length }}</strong> résultat(s) sur {{ users().length }}
+          } @else {
+            Affichage par groupes de 10
+          }
+        </p>
       </div>
+
+      <tui-loader [loading]="loading()" [overlay]="true">
+        <div class="table-wrap user-table-wrap">
+          <table tuiTable size="m">
+            <thead>
+              <tr>
+                <th tuiTh>Utilisateur</th>
+                <th tuiTh>Email</th>
+                <th tuiTh>Rôles</th>
+                <th tuiTh>État</th>
+                <th tuiTh>Actions</th>
+              </tr>
+            </thead>
+            <tbody tuiTbody>
+              @for (user of pagedUsers(); track user.id) {
+                <tr>
+                  <td tuiTd data-label="Utilisateur">
+                    <div tuiCell="m">
+                      <div
+                        size="s"
+                        [tuiAvatar]="displayName(user) | tuiInitials"
+                        [style.background]="displayName(user) | tuiAutoColor"
+                      ></div>
+                      <span tuiTitle
+                        >{{ user.surname }}<span tuiSubtitle>{{ user.name }}</span></span
+                      >
+                    </div>
+                  </td>
+                  <td tuiTd data-label="Email">
+                    <a class="user-email" [href]="'mailto:' + user.email">{{ user.email }}</a>
+                  </td>
+                  <td tuiTd data-label="Rôles">
+                    @for (role of user.roles; track role) {
+                      <span
+                        tuiBadge
+                        size="s"
+                        [appearance]="role === 'ADMIN' ? 'primary' : 'neutral'"
+                        class="role-badge"
+                        >{{ role }}</span
+                      >
+                    }
+                  </td>
+                  <td tuiTd data-label="État">
+                    <span tuiBadge size="s" [appearance]="user.present ? 'positive' : 'neutral'">{{
+                      user.present ? 'Présent' : 'Absent'
+                    }}</span>
+                  </td>
+                  <td tuiTd class="row-actions" data-label="Actions">
+                    <button
+                      tuiButton
+                      type="button"
+                      size="xs"
+                      appearance="secondary"
+                      iconStart="@tui.pencil"
+                      (click)="edit(user)"
+                    >
+                      Éditer
+                    </button>
+                    <button
+                      tuiButton
+                      type="button"
+                      size="xs"
+                      appearance="secondary-destructive"
+                      iconStart="@tui.trash-2"
+                      (click)="requestDelete(user)"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td tuiTd colspan="5" class="empty user-empty">
+                    @if (searchQuery()) {
+                      Aucun utilisateur ne correspond à « {{ searchQuery() }} ».
+                    } @else {
+                      Aucun utilisateur enregistré.
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </tui-loader>
+
+      @if (filteredUsers().length > 0) {
+        <footer class="users-pagination">
+          <p>
+            {{ firstVisibleUser() }}–{{ lastVisibleUser() }} sur
+            {{ filteredUsers().length }} utilisateur(s)
+          </p>
+          @if (pageCount() > 1) {
+            <nav aria-label="Pagination des utilisateurs">
+              <tui-pagination
+                [index]="pageIndex()"
+                [length]="pageCount()"
+                (indexChange)="goToPage($event)"
+              />
+            </nav>
+          }
+        </footer>
+      }
     </article>
   </section>
 
   <ng-template
+    [tuiDialog]="deleteTarget() !== null"
+    (tuiDialogChange)="onDeleteDialogChange($event)"
+    [tuiDialogOptions]="{ label: 'Supprimer ce compte ?', size: 's' }"
+  >
+    @if (deleteTarget(); as user) {
+      <section class="delete-dialog" role="alertdialog" aria-describedby="delete-user-copy">
+        <p id="delete-user-copy">
+          Cette action est définitive. Le compte de cet utilisateur ne pourra pas être récupéré.
+        </p>
+        <div class="delete-user-summary" tuiCell="m">
+          <div
+            size="s"
+            [tuiAvatar]="displayName(user) | tuiInitials"
+            [style.background]="displayName(user) | tuiAutoColor"
+          ></div>
+          <span tuiTitle>
+            {{ displayName(user) }}
+            <span tuiSubtitle>{{ user.email }}</span>
+          </span>
+        </div>
+        <div class="form-actions">
+          <button
+            tuiButton
+            type="button"
+            appearance="secondary-destructive"
+            [disabled]="loading()"
+            (click)="confirmDelete()"
+          >
+            Confirmer la suppression
+          </button>
+          <button tuiButton type="button" appearance="secondary" (click)="cancelDelete()">
+            Annuler
+          </button>
+        </div>
+      </section>
+    }
+  </ng-template>
+
+  <ng-template
     [tuiDialog]="importConfirmationOpen()"
     (tuiDialogChange)="importConfirmationOpen.set($event)"
-    [tuiDialogOptions]="{label: 'Confirmer l’import des participants ?', size: 's'}"
+    [tuiDialogOptions]="{ label: 'Confirmer l’import des participants ?', size: 's' }"
   >
     @if (importPreview(); as preview) {
       <section class="import-dialog" role="alertdialog" aria-describedby="import-confirmation-copy">
-        <p id="import-confirmation-copy">L’import va créer <strong>{{ preview.createCount }}</strong> compte(s) et en mettre <strong>{{ preview.updateCount }}</strong> à jour.</p>
-        <p>Les comptes existants conserveront leurs rôles, mots de passe et historiques. Tous les comptes du fichier seront marqués présents.</p>
+        <p id="import-confirmation-copy">
+          L’import va créer <strong>{{ preview.createCount }}</strong> compte(s) et en mettre
+          <strong>{{ preview.updateCount }}</strong> à jour.
+        </p>
+        <p>
+          Les comptes existants conserveront leurs rôles, mots de passe et historiques. Tous les
+          comptes du fichier seront marqués présents.
+        </p>
         <div class="form-actions">
-          <button tuiButton type="button" [disabled]="loading()" (click)="confirmImport()">Confirmer l’import</button>
-          <button tuiButton type="button" appearance="secondary" (click)="cancelImport()">Annuler</button>
+          <button tuiButton type="button" [disabled]="loading()" (click)="confirmImport()">
+            Confirmer l’import
+          </button>
+          <button tuiButton type="button" appearance="secondary" (click)="cancelImport()">
+            Annuler
+          </button>
         </div>
       </section>
     }

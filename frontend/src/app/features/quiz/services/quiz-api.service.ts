@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import {
+  QuizAnswerSubmissionResponse,
   QuizSessionSnapshotResponse,
   QuizSessionSummaryResponse,
   QuizSetDetailResponse,
@@ -91,8 +92,8 @@ export class QuizApiService {
     return firstValueFrom(this.http.post<QuizSessionSnapshotResponse>(`/api/quizzes/sessions/${sessionId}/join`, {}));
   }
 
-  answer(sessionId: number, answerId: number): Promise<QuizSessionSnapshotResponse> {
-    return firstValueFrom(this.http.post<QuizSessionSnapshotResponse>(`/api/quizzes/sessions/${sessionId}/answers`, { answerId }));
+  answer(sessionId: number, answerId: number): Promise<QuizAnswerSubmissionResponse> {
+    return firstValueFrom(this.http.post<QuizAnswerSubmissionResponse>(`/api/quizzes/sessions/${sessionId}/answers`, { answerId }));
   }
 
   private transition(sessionId: number, action: string): Promise<QuizSessionSnapshotResponse> {

@@ -1,10 +1,12 @@
 package com.pixsom.racebets.quiz;
 
 import com.pixsom.racebets.quiz.dto.QuizAnswerSubmitRequest;
+import com.pixsom.racebets.quiz.dto.QuizAnswerSubmissionResponse;
 import com.pixsom.racebets.quiz.dto.QuizSessionSnapshotResponse;
 import com.pixsom.racebets.quiz.dto.QuizSessionSummaryResponse;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,21 +32,27 @@ public class QuizPlayerController {
     }
 
     @GetMapping("/sessions/{sessionId}")
-    public QuizSessionSnapshotResponse snapshot(@PathVariable Long sessionId, Authentication authentication) {
-        return quizService.findSessionSnapshot(sessionId, authentication);
+    public QuizSessionSnapshotResponse snapshot(@PathVariable Long sessionId, @AuthenticationPrincipal Jwt jwt) {
+        return quizService.findSessionSnapshot(sessionId, userId(jwt));
     }
 
     @PostMapping("/sessions/{sessionId}/join")
-    public QuizSessionSnapshotResponse join(@PathVariable Long sessionId, Authentication authentication) {
-        return quizService.joinSession(sessionId, authentication);
+    public QuizSessionSnapshotResponse join(@PathVariable Long sessionId, @AuthenticationPrincipal Jwt jwt) {
+        Long userId = userId(jwt);
+        quizService.joinSession(sessionId, userId);
+        return quizService.findSessionSnapshot(sessionId, userId);
     }
 
     @PostMapping("/sessions/{sessionId}/answers")
-    public QuizSessionSnapshotResponse answer(
+    public QuizAnswerSubmissionResponse answer(
             @PathVariable Long sessionId,
             @Valid @RequestBody QuizAnswerSubmitRequest request,
-            Authentication authentication
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return quizService.submitAnswer(sessionId, request.answerId(), authentication);
+        return quizService.submitAnswer(sessionId, request.answerId(), userId(jwt));
+    }
+
+    private Long userId(Jwt jwt) {
+        return jwt.getClaim("userId");
     }
 }

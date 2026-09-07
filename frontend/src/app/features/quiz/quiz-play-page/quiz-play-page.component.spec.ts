@@ -1,4 +1,6 @@
 import { signal } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import {
   ComponentFixture,
   TestBed,
@@ -25,7 +27,11 @@ describe('QuizPlayPageComponent', () => {
       .and.callFake(async () => [activeSnapshot]),
     findSession: jasmine.createSpy('findSession').and.callFake(async () => activeSnapshot),
     joinSession: jasmine.createSpy('joinSession').and.callFake(async () => activeSnapshot),
-    answer: jasmine.createSpy('answer').and.callFake(async () => activeSnapshot)
+    answer: jasmine.createSpy('answer').and.callFake(async (_sessionId: number, answerId: number) => ({
+      selectedAnswerId: answerId,
+      phase: 'QUESTION_OPEN' as const,
+      serverTime: new Date().toISOString()
+    }))
   };
   const partnerService = {
     findVisible: jasmine.createSpy('findVisible').and.resolveTo([
@@ -40,6 +46,8 @@ describe('QuizPlayPageComponent', () => {
       providers: [
         provideRouter([]),
         provideTaiga(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: QuizApiService, useValue: quizApi },
         { provide: PartnerService, useValue: partnerService },
         {
@@ -129,7 +137,7 @@ describe('QuizPlayPageComponent', () => {
       ...questionSnapshot,
       currentQuestion: {
         ...questionSnapshot.currentQuestion!,
-        questionImageDataUrl: null,
+        questionImageUrl: null,
         answers: questionSnapshot.currentQuestion!.answers.slice(0, 2)
       }
     });
@@ -236,7 +244,7 @@ describe('QuizPlayPageComponent', () => {
         ...revealSnapshot,
         currentQuestion: {
           ...revealSnapshot.currentQuestion!,
-          answerImageDataUrl: null
+          answerImageUrl: null
         }
       });
 
@@ -397,8 +405,8 @@ describe('QuizPlayPageComponent', () => {
         id: 5,
         position: 1,
         text: 'Quelle casaque franchit la ligne en tête ?',
-        questionImageDataUrl: 'data:image/png;base64,question',
-        answerImageDataUrl: 'data:image/png;base64,answer',
+        questionImageUrl: '/api/quizzes/sessions/7/questions/5/images/question',
+        answerImageUrl: phase === 'QUESTION_OPEN' ? null : '/api/quizzes/sessions/7/questions/5/images/answer',
         durationSeconds: 30,
         answers: [
           {

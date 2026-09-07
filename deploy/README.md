@@ -93,6 +93,14 @@ Hibernate en valide la conformite. Toute evolution future du schema prend un nou
 - HTTPS : active avec un certificat Let's Encrypt.
 - `backend`, `postgres` et leurs ports ne doivent avoir aucun domaine ni publication de port.
 
+Definir `TRUSTED_PROXY_CIDR` avec le sous-reseau Docker exact utilise exclusivement par Traefik pour joindre le
+frontend. Le relever sur le serveur avec `docker network inspect <reseau-traefik>` ; ne jamais utiliser l'ensemble des
+plages privees (`10.0.0.0/8`, `172.16.0.0/12` ou `192.168.0.0/16`). La valeur de repli `127.0.0.1/32` ignore les
+adresses transmises et reste sure, mais tous les clients apparaissent alors comme le proxy pour la limite par client.
+
+Le pool configure 20 connexions PostgreSQL par replique backend. Avant d'augmenter le nombre de repliques, verifier
+que leur total, les connexions d'administration et la marge de maintenance restent sous `max_connections`.
+
 ### QR code permanent Olifan
 
 Le QR code imprime doit pointer vers `https://go.pixsom.fr/olifan`, et non directement vers l'application. Le frontend

@@ -43,11 +43,14 @@ class AuthServiceTest {
     @Mock
     private AppBrandingService brandingService;
 
+    @Mock
+    private AuthAttemptLimiter attemptLimiter;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(appUserRepository, jwtService, passwordEncoder, brandingService);
+        authService = new AuthService(appUserRepository, jwtService, passwordEncoder, brandingService, attemptLimiter);
         ReflectionTestUtils.setField(authService, "jwtExpiration", 3_600_000L);
     }
 
@@ -68,6 +71,7 @@ class AuthServiceTest {
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(3_600_000L);
         assertThat(response.roles()).containsExactly(Role.USER);
+        verify(attemptLimiter).recordSuccess("bettor@example.com");
     }
 
     @Test
@@ -131,6 +135,7 @@ class AuthServiceTest {
 
         assertThat(response.token()).isEqualTo("signed.jwt.token");
         verifyNoInteractions(passwordEncoder);
+        verify(attemptLimiter).recordSuccess("bettor@example.com");
     }
 
     @Test

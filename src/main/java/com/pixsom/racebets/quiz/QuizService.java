@@ -7,6 +7,8 @@ import com.pixsom.racebets.app.AppMode;
 import com.pixsom.racebets.entities.AppUser;
 import com.pixsom.racebets.quiz.dto.QuizAnswerRequest;
 import com.pixsom.racebets.quiz.dto.QuizAnswerResponse;
+import com.pixsom.racebets.quiz.dto.QuizAnswerSubmissionResponse;
+import com.pixsom.racebets.quiz.dto.QuizLiveQuestionResponse;
 import com.pixsom.racebets.quiz.dto.QuizQuestionRequest;
 import com.pixsom.racebets.quiz.dto.QuizQuestionResponse;
 import com.pixsom.racebets.quiz.dto.QuizScoreResponse;
@@ -16,35 +18,27 @@ import com.pixsom.racebets.quiz.dto.QuizSetDetailResponse;
 import com.pixsom.racebets.quiz.dto.QuizSetListResponse;
 import com.pixsom.racebets.quiz.dto.QuizSetRequest;
 import com.pixsom.racebets.repositories.AppUserRepository;
+import com.pixsom.racebets.repositories.QuizAnswerRepository;
 import com.pixsom.racebets.repositories.QuizParticipantRepository;
+import com.pixsom.racebets.repositories.QuizQuestionRepository;
 import com.pixsom.racebets.repositories.QuizSessionRepository;
 import com.pixsom.racebets.repositories.QuizSetRepository;
 import com.pixsom.racebets.repositories.QuizSubmissionRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Base64;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class QuizService {
 
     private static final int DEFAULT_DURATION_SECONDS = 30;
     private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-    private static final Set<String> ALLOWED_IMAGE_PREFIXES = Set.of(
-            "data:image/png;base64,",
-            "data:image/jpeg;base64,",
-            "data:image/webp;base64,"
-    );
     private static final List<QuizSessionPhase> LIVE_PHASES = List.of(
             QuizSessionPhase.OPENING,
             QuizSessionPhase.QUESTION_OPEN,
@@ -55,6 +49,8 @@ public class QuizService {
 
     private final QuizSetRepository quizSetRepository;
     private final QuizSessionRepository quizSessionRepository;
+    private final QuizQuestionRepository questionRepository;
+    private final QuizAnswerRepository answerRepository;
     private final QuizParticipantRepository participantRepository;
     private final QuizSubmissionRepository submissionRepository;
     private final AppUserRepository appUserRepository;
@@ -63,6 +59,8 @@ public class QuizService {
     public QuizService(
             QuizSetRepository quizSetRepository,
             QuizSessionRepository quizSessionRepository,
+            QuizQuestionRepository questionRepository,
+            QuizAnswerRepository answerRepository,
             QuizParticipantRepository participantRepository,
             QuizSubmissionRepository submissionRepository,
             AppUserRepository appUserRepository,
@@ -70,6 +68,8 @@ public class QuizService {
     ) {
         this.quizSetRepository = quizSetRepository;
         this.quizSessionRepository = quizSessionRepository;
+        this.questionRepository = questionRepository;
+        this.answerRepository = answerRepository;
         this.participantRepository = participantRepository;
         this.submissionRepository = submissionRepository;
         this.appUserRepository = appUserRepository;
@@ -178,7 +178,7 @@ public class QuizService {
         QuizSession session = findSessionForUpdate(sessionId);
         requirePhase(session, QuizSessionPhase.SCOREBOARD);
         int nextIndex = session.getCurrentQuestionIndex() + 1;
-        if (nextIndex >= session.getQuizSet().getQuestions().size()) {
+        if (nextIndex >= questionCount(session)) {
             setPhase(session, QuizSessionPhase.FINISHED);
         } else {
             session.setCurrentQuestionIndex(nextIndex);
@@ -217,70 +217,69 @@ public class QuizService {
     }
 
     @Transactional
-    public QuizSessionSnapshotResponse findSessionSnapshot(Long sessionId, Authentication authentication) {
+    public QuizSessionSnapshotResponse findSessionSnapshot(Long sessionId, Long userId) {
         featureSettingsService.requireActiveMode(AppMode.QUIZ);
-        AppUser user = authentication == null ? null : currentUser(authentication);
-        return toSnapshot(findSession(sessionId), user, false);
+        return toSnapshot(findSession(sessionId), userId, false);
     }
 
     @Transactional
-    public QuizSessionSnapshotResponse joinSession(Long sessionId, Authentication authentication) {
+    public void joinSession(Long sessionId, Long userId) {
         featureSettingsService.requireActiveMode(AppMode.QUIZ);
-        QuizSession session = findSession(sessionId);
+        QuizSession session = findSessionForRead(sessionId);
         if (!LIVE_PHASES.contains(session.getPhase())) {
             throw new ConflictException("This quiz session is no longer active");
         }
-        AppUser user = currentUser(authentication);
-        if (!participantRepository.existsBySessionAndUser(session, user)) {
+        AppUser user = currentUserForUpdate(userId);
+        if (!participantRepository.existsBySession_IdAndUser_Id(sessionId, userId)) {
             QuizParticipant participant = new QuizParticipant();
             participant.setSession(session);
             participant.setUser(user);
             participantRepository.save(participant);
         }
-        return toSnapshot(session, user, false);
     }
 
     @Transactional
-    public QuizSessionSnapshotResponse submitAnswer(Long sessionId, Long answerId, Authentication authentication) {
+    public QuizAnswerSubmissionResponse submitAnswer(Long sessionId, Long answerId, Long userId) {
         featureSettingsService.requireActiveMode(AppMode.QUIZ);
-        QuizSession session = findSessionForUpdate(sessionId);
+        QuizSession session = findSessionForRead(sessionId);
         requirePhase(session, QuizSessionPhase.QUESTION_OPEN);
-        AppUser user = currentUser(authentication);
-        if (!participantRepository.existsBySessionAndUser(session, user)) {
-            throw new ConflictException("Join the quiz session before answering");
+        QuizParticipant participant = participantRepository.findLockedBySessionIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ConflictException("Join the quiz session before answering"));
+
+        LiveQuestion question = currentQuestion(session);
+        Instant now = Instant.now();
+        if (isQuestionExpired(session, question, now)) {
+            return new QuizAnswerSubmissionResponse(null, session.getPhase(), now);
         }
 
-        QuizQuestion question = currentQuestion(session);
-        if (isQuestionExpired(session, Instant.now())) {
-            setPhase(session, QuizSessionPhase.QUESTION_LOCKED);
-            return toSnapshot(session, user, false);
-        }
-
-        QuizAnswer answer = question.getAnswers().stream()
+        QuizAnswer answer = question.answers().stream()
                 .filter(candidate -> Objects.equals(candidate.getId(), answerId))
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("Answer not found for current question"));
 
-        QuizSubmission submission = submissionRepository.findBySessionAndQuestionAndUser(session, question, user)
+        QuizSubmission submission = submissionRepository.findBySession_IdAndQuestion_IdAndUser_Id(
+                        sessionId, question.id(), userId)
                 .orElseGet(() -> {
                     QuizSubmission created = new QuizSubmission();
                     created.setSession(session);
-                    created.setQuestion(question);
-                    created.setUser(user);
+                    created.setQuestion(question.entity() == null
+                            ? questionRepository.getReferenceById(question.id())
+                            : question.entity());
+                    created.setUser(participant.getUser());
                     return created;
                 });
         submission.setAnswer(answer);
         submission.setCorrect(answer.isCorrect());
         submissionRepository.save(submission);
 
-        return toSnapshot(session, user, false);
+        return new QuizAnswerSubmissionResponse(answerId, session.getPhase(), now);
     }
 
     @Transactional
     public void lockExpiredQuestions() {
         Instant now = Instant.now();
         quizSessionRepository.findLockedByPhase(QuizSessionPhase.QUESTION_OPEN).stream()
-                .filter(session -> isQuestionExpired(session, now))
+                .filter(session -> isQuestionExpired(session, currentQuestion(session), now))
                 .forEach(session -> setPhase(session, QuizSessionPhase.QUESTION_LOCKED));
     }
 
@@ -324,17 +323,10 @@ public class QuizService {
             return null;
         }
         String trimmed = value.trim();
-        String prefix = ALLOWED_IMAGE_PREFIXES.stream()
-                .filter(trimmed::startsWith)
-                .findFirst()
-                .orElseThrow(() -> new ConflictException("Les images doivent etre au format PNG, JPEG ou WebP"));
         try {
-            byte[] decoded = Base64.getDecoder().decode(trimmed.substring(prefix.length()));
-            if (decoded.length > MAX_IMAGE_BYTES) {
-                throw new ConflictException("Chaque image doit peser 5 Mo maximum");
-            }
+            QuizImageData.decode(trimmed, MAX_IMAGE_BYTES);
         } catch (IllegalArgumentException exception) {
-            throw new ConflictException("L'image envoyee est invalide");
+            throw new ConflictException(exception.getMessage());
         }
         return trimmed;
     }
@@ -360,11 +352,16 @@ public class QuizService {
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
     }
 
-    private AppUser currentUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
+    private QuizSession findSessionForRead(Long id) {
+        return quizSessionRepository.findReadLockedById(id)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+    }
+
+    private AppUser currentUserForUpdate(Long userId) {
+        if (userId == null) {
             throw new NotFoundException("Authenticated user not found");
         }
-        return appUserRepository.findByEmail(authentication.getName())
+        return appUserRepository.findLockedById(userId)
                 .orElseThrow(() -> new NotFoundException("Authenticated user not found"));
     }
 
@@ -381,21 +378,40 @@ public class QuizService {
         session.setActiveSlot(terminal ? null : true);
     }
 
-    private boolean isQuestionExpired(QuizSession session, Instant now) {
+    private boolean isQuestionExpired(QuizSession session, LiveQuestion question, Instant now) {
         if (session.getPhase() != QuizSessionPhase.QUESTION_OPEN || session.getPhaseStartedAt() == null) {
             return false;
         }
-        Instant deadline = session.getPhaseStartedAt().plusSeconds(currentQuestion(session).getDurationSeconds());
+        Instant deadline = session.getPhaseStartedAt().plusSeconds(question.durationSeconds());
         return !now.isBefore(deadline);
     }
 
-    private QuizQuestion currentQuestion(QuizSession session) {
+    private LiveQuestion currentQuestion(QuizSession session) {
         int index = session.getCurrentQuestionIndex();
-        List<QuizQuestion> questions = session.getQuizSet().getQuestions();
-        if (index < 0 || index >= questions.size()) {
+        if (index < 0) {
             throw new ConflictException("No active question for this session");
         }
-        return questions.get(index);
+        Long quizSetId = session.getQuizSet().getId();
+        if (quizSetId == null) {
+            List<QuizQuestion> questions = session.getQuizSet().getQuestions();
+            if (index >= questions.size()) {
+                throw new ConflictException("No active question for this session");
+            }
+            return LiveQuestion.from(questions.get(index));
+        }
+        QuizQuestionRepository.QuizLiveQuestionView question = questionRepository
+                .findLiveByQuizSetIdAndPosition(quizSetId, index)
+                .orElseThrow(() -> new ConflictException("No active question for this session"));
+        return new LiveQuestion(
+                question.getId(),
+                question.getPosition(),
+                question.getText(),
+                question.getDurationSeconds(),
+                question.getQuestionImagePresent(),
+                question.getAnswerImagePresent(),
+                answerRepository.findByQuestion_IdOrderByPositionAsc(question.getId()),
+                null
+        );
     }
 
     private QuizSetListResponse toListResponse(QuizSet quizSet) {
@@ -435,31 +451,36 @@ public class QuizService {
                 session.getQuizSet().getTitle(),
                 session.getPhase(),
                 session.getCurrentQuestionIndex(),
-                session.getQuizSet().getQuestions().size(),
+                questionCount(session),
                 participantRepository.countBySession(session)
         );
     }
 
-    private QuizSessionSnapshotResponse toSnapshot(QuizSession session, AppUser user, boolean adminView) {
-        QuizQuestion question = session.getCurrentQuestionIndex() < 0 ? null : currentQuestion(session);
+    private QuizSessionSnapshotResponse toSnapshot(QuizSession session, Long userId, boolean adminView) {
+        LiveQuestion question = session.getCurrentQuestionIndex() < 0 ? null : currentQuestion(session);
         Instant serverTime = Instant.now();
         Instant questionEndsAt = session.getPhase() == QuizSessionPhase.QUESTION_OPEN
                 && session.getPhaseStartedAt() != null
                 && question != null
-                ? session.getPhaseStartedAt().plusSeconds(question.getDurationSeconds())
+                ? session.getPhaseStartedAt().plusSeconds(question.durationSeconds())
                 : null;
-        boolean reveal = adminView || session.getPhase() == QuizSessionPhase.ANSWER_REVEALED
+        boolean revealAnswers = adminView || session.getPhase() == QuizSessionPhase.ANSWER_REVEALED
                 || session.getPhase() == QuizSessionPhase.SCOREBOARD
                 || session.getPhase() == QuizSessionPhase.FINISHED;
-        Long selectedAnswerId = user == null || question == null ? null : submissionRepository
-                .findBySessionAndQuestionAndUser(session, question, user)
+        boolean revealAnswerImage = session.getPhase() == QuizSessionPhase.ANSWER_REVEALED
+                || session.getPhase() == QuizSessionPhase.SCOREBOARD
+                || session.getPhase() == QuizSessionPhase.FINISHED;
+        Long selectedAnswerId = userId == null || question == null ? null : submissionRepository
+                .findBySession_IdAndQuestion_IdAndUser_Id(session.getId(), question.id(), userId)
                 .map(submission -> submission.getAnswer().getId())
                 .orElse(null);
-        Long correctAnswerId = reveal && question != null ? question.getAnswers().stream()
+        Long correctAnswerId = revealAnswers && question != null ? question.answers().stream()
                 .filter(QuizAnswer::isCorrect)
                 .map(QuizAnswer::getId)
                 .findFirst()
                 .orElse(null) : null;
+        boolean includeScores = adminView || session.getPhase() == QuizSessionPhase.SCOREBOARD
+                || session.getPhase() == QuizSessionPhase.FINISHED;
 
         return new QuizSessionSnapshotResponse(
                 session.getId(),
@@ -467,34 +488,71 @@ public class QuizService {
                 session.getQuizSet().getTitle(),
                 session.getPhase(),
                 session.getCurrentQuestionIndex(),
-                session.getQuizSet().getQuestions().size(),
+                questionCount(session),
                 participantRepository.countBySession(session),
                 serverTime,
                 session.getPhaseStartedAt(),
                 questionEndsAt,
-                user != null && participantRepository.existsBySessionAndUser(session, user),
+                userId != null && participantRepository.existsBySession_IdAndUser_Id(session.getId(), userId),
                 selectedAnswerId,
                 correctAnswerId,
-                question == null ? 0 : submissionRepository.countBySessionAndQuestion(session, question),
-                question == null ? null : toQuestionResponse(question, reveal),
-                scores(session)
+                question == null ? 0 : submissionRepository.countBySession_IdAndQuestion_Id(session.getId(), question.id()),
+                question == null ? null : toLiveQuestionResponse(session.getId(), question, revealAnswers, revealAnswerImage),
+                includeScores ? scores(session.getId()) : List.of()
         );
     }
 
-    private List<QuizScoreResponse> scores(QuizSession session) {
-        Map<Long, Long> scoresByUserId = submissionRepository.findBySession(session).stream()
-                .filter(QuizSubmission::isCorrect)
-                .collect(Collectors.groupingBy(submission -> submission.getUser().getId(), Collectors.counting()));
+    private QuizLiveQuestionResponse toLiveQuestionResponse(Long sessionId, LiveQuestion question,
+                                                            boolean revealAnswers, boolean revealAnswerImage) {
+        String imageBaseUrl = "/api/quizzes/sessions/" + sessionId + "/questions/" + question.id() + "/images/";
+        return new QuizLiveQuestionResponse(
+                question.id(),
+                question.position(),
+                question.text(),
+                question.questionImagePresent() ? imageBaseUrl + "question" : null,
+                revealAnswerImage && question.answerImagePresent() ? imageBaseUrl + "answer" : null,
+                question.durationSeconds(),
+                question.answers().stream().map(answer -> new QuizAnswerResponse(
+                        answer.getId(),
+                        answer.getPosition(),
+                        answer.getText(),
+                        revealAnswers ? answer.isCorrect() : null
+                )).toList()
+        );
+    }
 
-        return participantRepository.findBySession(session).stream()
-                .map(QuizParticipant::getUser)
-                .distinct()
-                .map(user -> new QuizScoreResponse(
-                        user.getId(),
-                        (user.getName() + " " + user.getSurname()).trim(),
-                        scoresByUserId.getOrDefault(user.getId(), 0L).intValue()
+    private int questionCount(QuizSession session) {
+        Long quizSetId = session.getQuizSet().getId();
+        return quizSetId == null
+                ? session.getQuizSet().getQuestions().size()
+                : Math.toIntExact(questionRepository.countByQuizSet_Id(quizSetId));
+    }
+
+    private List<QuizScoreResponse> scores(Long sessionId) {
+        return submissionRepository.findScoresBySessionId(sessionId).stream()
+                .map(score -> new QuizScoreResponse(
+                        score.getUserId(),
+                        score.getDisplayName(),
+                        Math.toIntExact(score.getScore())
                 ))
-                .sorted(Comparator.comparingInt(QuizScoreResponse::score).reversed().thenComparing(QuizScoreResponse::displayName))
                 .toList();
+    }
+
+    private record LiveQuestion(Long id, int position, String text, int durationSeconds,
+                                boolean questionImagePresent, boolean answerImagePresent,
+                                List<QuizAnswer> answers, QuizQuestion entity) {
+
+        private static LiveQuestion from(QuizQuestion question) {
+            return new LiveQuestion(
+                    question.getId(),
+                    question.getPosition(),
+                    question.getText(),
+                    question.getDurationSeconds(),
+                    question.getQuestionImageDataUrl() != null,
+                    question.getAnswerImageDataUrl() != null,
+                    question.getAnswers(),
+                    question
+            );
+        }
     }
 }

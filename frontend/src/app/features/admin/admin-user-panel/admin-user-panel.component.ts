@@ -1,21 +1,65 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TuiTable } from '@taiga-ui/addon-table';
-import { TuiButton, TuiCheckbox, TuiDialog, TuiInput, TuiTitle } from '@taiga-ui/core';
+import {
+  TuiButton,
+  TuiCell,
+  TuiCheckbox,
+  TuiDialog,
+  TuiInput,
+  TuiLabel,
+  TuiLoader,
+  TuiTitle
+} from '@taiga-ui/core';
 import { TuiCard, TuiHeader } from '@taiga-ui/layout';
-import { TuiBadge, TuiSwitch } from '@taiga-ui/kit';
+import {
+  TuiAutoColorPipe,
+  TuiAvatar,
+  TuiBadge,
+  TuiInitialsPipe,
+  TuiPagination,
+  TuiSwitch
+} from '@taiga-ui/kit';
 
-import { AdminUserRequest, AdminUserResponse, UserImportAction, UserImportPreview, UserRole } from '../models/admin-api.model';
+import {
+  AdminUserRequest,
+  AdminUserResponse,
+  UserImportAction,
+  UserImportPreview,
+  UserRole
+} from '../models/admin-api.model';
 import { AdminApiService } from '../services/admin-api.service';
 
 interface BackendErrorResponse {
   readonly message: string;
 }
 
+const USER_PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-admin-user-panel',
-  imports: [ReactiveFormsModule, TuiBadge, TuiButton, TuiCard, TuiCheckbox, TuiDialog, TuiHeader, TuiInput, TuiSwitch, TuiTable, TuiTitle],
+  imports: [
+    ReactiveFormsModule,
+    TuiAutoColorPipe,
+    TuiAvatar,
+    TuiBadge,
+    TuiButton,
+    TuiCard,
+    TuiCell,
+    TuiCheckbox,
+    TuiDialog,
+    TuiHeader,
+    TuiInitialsPipe,
+    TuiInput,
+    TuiLabel,
+    TuiLoader,
+    TuiPagination,
+    TuiSwitch,
+    TuiTable,
+    TuiTitle
+  ],
   templateUrl: './admin-user-panel.component.html',
   styleUrl: './admin-user-panel.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -32,13 +76,48 @@ export class AdminUserPanelComponent {
   readonly importFile = signal<File | null>(null);
   readonly importPreview = signal<UserImportPreview | null>(null);
   readonly importConfirmationOpen = signal(false);
+  readonly searchControl = new FormControl('', { nonNullable: true });
+  readonly searchQuery = toSignal(this.searchControl.valueChanges, { initialValue: '' });
+  readonly pageIndex = signal(0);
+  readonly filteredUsers = computed(() => {
+    const terms = this.normalizeSearch(this.searchQuery()).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return this.users();
+
+    return this.users().filter((user) => {
+      const searchableText = this.normalizeSearch(`${user.name} ${user.surname} ${user.email}`);
+      return terms.every((term) => searchableText.includes(term));
+    });
+  });
+  readonly pageCount = computed(() => Math.ceil(this.filteredUsers().length / USER_PAGE_SIZE));
+  readonly pagedUsers = computed(() => {
+    const start = this.pageIndex() * USER_PAGE_SIZE;
+    return this.filteredUsers().slice(start, start + USER_PAGE_SIZE);
+  });
+  readonly firstVisibleUser = computed(() =>
+    this.filteredUsers().length === 0 ? 0 : this.pageIndex() * USER_PAGE_SIZE + 1
+  );
+  readonly lastVisibleUser = computed(() =>
+    Math.min((this.pageIndex() + 1) * USER_PAGE_SIZE, this.filteredUsers().length)
+  );
 
   readonly userForm = new FormGroup({
-    name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }),
-    surname: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }),
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(80)]
+    }),
+    surname: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(80)]
+    }),
     birthDate: new FormControl<string | null>(null),
-    email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email, Validators.maxLength(180)] }),
-    accessCode: new FormControl<string | null>(null, [Validators.minLength(8), Validators.maxLength(128)]),
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email, Validators.maxLength(180)]
+    }),
+    accessCode: new FormControl<string | null>(null, [
+      Validators.minLength(8),
+      Validators.maxLength(128)
+    ]),
     present: new FormControl(true, { nonNullable: true }),
     admin: new FormControl(false, { nonNullable: true }),
     user: new FormControl(true, { nonNullable: true }),
@@ -46,12 +125,15 @@ export class AdminUserPanelComponent {
   });
 
   constructor() {
+    this.searchControl.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.pageIndex.set(0));
     void this.refresh();
   }
 
   protected async refresh(): Promise<void> {
     await this.runAction(async () => {
-      this.users.set(await this.adminApi.findUsers());
+      this.setUsers(await this.adminApi.findUsers());
     }, false);
   }
 
@@ -82,7 +164,7 @@ export class AdminUserPanelComponent {
         this.success.set('Utilisateur mis a jour.');
       }
       this.reset();
-      this.users.set(await this.adminApi.findUsers());
+      this.setUsers(await this.adminApi.findUsers());
     });
   }
 
@@ -126,6 +208,10 @@ export class AdminUserPanelComponent {
     this.deleteTarget.set(null);
   }
 
+  protected onDeleteDialogChange(open: boolean): void {
+    if (!open) this.cancelDelete();
+  }
+
   protected async confirmDelete(): Promise<void> {
     const user = this.deleteTarget();
     if (user === null) {
@@ -136,7 +222,7 @@ export class AdminUserPanelComponent {
 
     await this.runAction(async () => {
       await this.adminApi.deleteUser(user.id);
-      this.users.set(await this.adminApi.findUsers());
+      this.setUsers(await this.adminApi.findUsers());
       this.success.set('Utilisateur supprime.');
     });
   }
@@ -186,20 +272,30 @@ export class AdminUserPanelComponent {
     this.importConfirmationOpen.set(false);
     await this.runAction(async () => {
       const result = await this.adminApi.confirmUserImport(file, preview);
-      this.users.set(await this.adminApi.findUsers());
+      this.setUsers(await this.adminApi.findUsers());
       this.importFile.set(null);
       this.importPreview.set(null);
-      this.success.set(`${result.createdCount} compte(s) créé(s), ${result.updatedCount} mis à jour, ${result.unchangedCount} inchangé(s).`);
+      this.success.set(
+        `${result.createdCount} compte(s) créé(s), ${result.updatedCount} mis à jour, ${result.unchangedCount} inchangé(s).`
+      );
     });
   }
 
   protected importActionLabel(action: UserImportAction): string {
-    return ({
+    return {
       CREATE: 'À créer',
       UPDATE: 'À mettre à jour',
       UNCHANGED: 'Inchangé',
       ERROR: 'Erreur'
-    })[action];
+    }[action];
+  }
+
+  protected goToPage(index: number): void {
+    this.pageIndex.set(index);
+  }
+
+  protected displayName(user: AdminUserResponse): string {
+    return `${user.name} ${user.surname}`;
   }
 
   private buildRequest(): AdminUserRequest | null {
@@ -223,6 +319,19 @@ export class AdminUserPanelComponent {
     };
   }
 
+  private setUsers(users: readonly AdminUserResponse[]): void {
+    this.users.set(users);
+    this.pageIndex.set(0);
+  }
+
+  private normalizeSearch(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('fr')
+      .trim();
+  }
+
   private async runAction(action: () => Promise<void>, clearSuccess = true): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -239,13 +348,18 @@ export class AdminUserPanelComponent {
   private toErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401 || error.status === 403) return 'Acces admin refuse.';
-      if ((error.status === 400 || error.status === 409) && this.isBackendError(error.error)) return error.error.message;
+      if ((error.status === 400 || error.status === 409) && this.isBackendError(error.error))
+        return error.error.message;
       if (error.status === 404) return 'Utilisateur introuvable.';
     }
     return 'Operation utilisateur impossible pour le moment.';
   }
 
   private isBackendError(value: unknown): value is BackendErrorResponse {
-    return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>)['message'] === 'string';
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as Record<string, unknown>)['message'] === 'string'
+    );
   }
 }

@@ -55,8 +55,8 @@
         <section class="panel question-panel">
           <header class="panel-head"><div><span class="eyebrow">QUESTION {{ live.currentQuestionIndex + 1 }} / {{ live.questionCount }}</span><h2>{{ live.currentQuestion?.text }}</h2></div><span class="timer">{{ live.currentQuestion?.durationSeconds }} s</span></header>
 
-          @if (live.currentQuestion?.questionImageDataUrl; as image) { <img class="question-image" [src]="image" alt="Illustration de la question" /> }
-          @if ((live.phase === 'ANSWER_REVEALED' || live.phase === 'SCOREBOARD') && live.currentQuestion?.answerImageDataUrl; as image) { <img class="question-image answer-image" [src]="image" alt="Illustration de la réponse" /> }
+          @if (live.currentQuestion?.questionImageUrl; as image) { <img class="question-image" [appSecureImage]="image" alt="Illustration de la question" /> }
+          @if ((live.phase === 'ANSWER_REVEALED' || live.phase === 'SCOREBOARD') && live.currentQuestion?.answerImageUrl; as image) { <img class="question-image answer-image" [appSecureImage]="image" alt="Illustration de la réponse" /> }
 
           <div class="answer-grid">
             @for (answer of live.currentQuestion?.answers ?? []; track answer.id; let index = $index) {

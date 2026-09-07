@@ -20,6 +20,10 @@ public interface QuizSessionRepository extends JpaRepository<QuizSession, Long> 
     @Query("select session from QuizSession session where session.id = :id")
     Optional<QuizSession> findLockedById(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select session from QuizSession session where session.id = :id")
+    Optional<QuizSession> findReadLockedById(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from QuizSession session where session.phase = :phase")
     List<QuizSession> findLockedByPhase(@Param("phase") QuizSessionPhase phase);
