@@ -1,59 +1,46 @@
-# Frontend
+# Frontend Racebets
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+Application Angular 19 standalone utilisant Signals, NgRx Signals et Taiga UI v5. Node.js 22 est la version utilisee par la CI et l'image Docker.
 
-## Development server
+## Routes
 
-To start a local development server, run:
+- `/` : tableau des courses et paris fictifs, protege par le feature flag `bettingEnabled`.
+- `/login` : connexion et inscription.
+- `/quiz` : participation aux quiz, protegee par le feature flag `quizEnabled`.
+- `/admin` : administration reservee au role `ADMIN`.
 
-```bash
-ng serve
-```
+L'administration couvre les utilisateurs, les chevaux, les courses, les participations, les quiz et les feature flags.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Developpement
 
 ```bash
-ng generate component component-name
+npm ci
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+`npm start` lance Angular sur `http://localhost:4200` avec `proxy.conf.json`. Les appels `/api` sont transmis au backend local sur `http://localhost:8080`.
+
+## Commandes
 
 ```bash
-ng generate --help
+npm run build
+npm run lint
+npm test
+npm run format:check
 ```
 
-## Building
+Le build de production est genere sous `dist/frontend/browser`. Aucun framework de test end-to-end n'est configure actuellement.
 
-To build the project run:
+## Architecture fonctionnelle
 
-```bash
-ng build
-```
+- `core/auth` : session JWT locale, guard admin et intercepteur bearer.
+- `core/features` : chargement des feature flags et guards de routes.
+- `core/realtime` : client SSE du tableau de courses avec reconnexion.
+- `features/admin` : ecrans et API d'administration.
+- `features/betting` : tableau de course et store NgRx Signals.
+- `features/quiz` : administration et participation aux sessions de quiz.
+- `shared/ui` : composants visuels reutilisables.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Le tableau de courses consomme `/api/realtime/race-betting/stream` avec `EventSource`. Le joueur de quiz actualise son snapshot REST toutes les deux secondes. La session JWT est conservee dans `localStorage`; cette strategie doit etre reevaluee avant une mise en production exposee.
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+La couverture frontend est encore minimale : seul le composant racine possede actuellement un test unitaire.

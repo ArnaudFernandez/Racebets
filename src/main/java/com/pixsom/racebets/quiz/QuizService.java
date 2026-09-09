@@ -78,7 +78,7 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public List<QuizSetListResponse> findQuizSets() {
-        return quizSetRepository.findAll(Sort.by("createdAt").descending())
+        return quizSetRepository.findByArchivedFalse(Sort.by("createdAt").descending())
                 .stream()
                 .map(this::toListResponse)
                 .toList();
@@ -100,6 +100,14 @@ public class QuizService {
     public QuizSetDetailResponse updateQuizSet(Long id, QuizSetRequest request) {
         QuizSet quizSet = findSet(id);
         requireNoLiveSession(quizSet, "Un questionnaire utilise par la session live ne peut pas etre modifie");
+
+        if (quizSessionRepository.existsByQuizSet(quizSet)) {
+            quizSet.setArchived(true);
+            QuizSet replacement = new QuizSet();
+            applySetRequest(replacement, request);
+            return toDetailResponse(quizSetRepository.save(replacement), true);
+        }
+
         quizSet.getQuestions().clear();
         applySetRequest(quizSet, request);
         return toDetailResponse(quizSetRepository.save(quizSet), true);
@@ -120,6 +128,9 @@ public class QuizService {
     @Transactional
     public QuizSessionSnapshotResponse openSession(Long quizSetId) {
         QuizSet quizSet = findSet(quizSetId);
+        if (quizSet.isArchived()) {
+            throw new ConflictException("Cette version du questionnaire est archivee");
+        }
         if (quizSet.getQuestions().isEmpty()) {
             throw new ConflictException("A quiz set must contain at least one question before launch");
         }

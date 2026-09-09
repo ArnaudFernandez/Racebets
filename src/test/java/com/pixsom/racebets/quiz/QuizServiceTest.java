@@ -95,6 +95,60 @@ class QuizServiceTest {
     }
 
     @Test
+    void updatingPlayedQuizCreatesReplacementWithoutChangingHistoricalQuestions() {
+        QuizSet playedQuiz = quizSetWithOneQuestion();
+        playedQuiz.setTitle("Ancienne version");
+        QuizQuestion historicalQuestion = playedQuiz.getQuestions().getFirst();
+        QuizAnswer historicalAnswer = historicalQuestion.getAnswers().getFirst();
+        when(quizSetRepository.findById(1L)).thenReturn(Optional.of(playedQuiz));
+        when(quizSessionRepository.existsByQuizSetAndPhaseIn(org.mockito.ArgumentMatchers.eq(playedQuiz), any())).thenReturn(false);
+        when(quizSessionRepository.existsByQuizSet(playedQuiz)).thenReturn(true);
+        when(quizSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        QuizSetRequest request = request("Nouvelle version", "Nouvelle question");
+        var response = service.updateQuizSet(1L, request);
+
+        assertThat(playedQuiz.isArchived()).isTrue();
+        assertThat(playedQuiz.getTitle()).isEqualTo("Ancienne version");
+        assertThat(playedQuiz.getQuestions()).containsExactly(historicalQuestion);
+        assertThat(historicalQuestion.getAnswers().getFirst()).isSameAs(historicalAnswer);
+        assertThat(response.title()).isEqualTo("Nouvelle version");
+        assertThat(response.questions()).extracting(question -> question.text()).containsExactly("Nouvelle question");
+        verify(quizSetRepository).save(org.mockito.ArgumentMatchers.argThat(replacement ->
+                replacement != playedQuiz && !replacement.isArchived()
+        ));
+    }
+
+    @Test
+    void updatingUnplayedQuizStillUpdatesItInPlace() {
+        QuizSet quizSet = quizSetWithOneQuestion();
+        QuizQuestion previousQuestion = quizSet.getQuestions().getFirst();
+        when(quizSetRepository.findById(1L)).thenReturn(Optional.of(quizSet));
+        when(quizSessionRepository.existsByQuizSetAndPhaseIn(org.mockito.ArgumentMatchers.eq(quizSet), any())).thenReturn(false);
+        when(quizSessionRepository.existsByQuizSet(quizSet)).thenReturn(false);
+        when(quizSetRepository.save(quizSet)).thenReturn(quizSet);
+
+        var response = service.updateQuizSet(1L, request("Quiz modifie", "Question modifiee"));
+
+        assertThat(quizSet.isArchived()).isFalse();
+        assertThat(quizSet.getQuestions()).noneMatch(question -> question == previousQuestion);
+        assertThat(response.title()).isEqualTo("Quiz modifie");
+        verify(quizSetRepository).save(quizSet);
+    }
+
+    @Test
+    void archivedQuizCannotBeLaunched() {
+        QuizSet quizSet = quizSetWithOneQuestion();
+        quizSet.setArchived(true);
+        when(quizSetRepository.findById(1L)).thenReturn(Optional.of(quizSet));
+
+        assertThatThrownBy(() -> service.openSession(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("archivee");
+        verify(quizSessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
     void finishingLastQuestionReleasesTheUniqueActiveSlot() {
         QuizSession session = new QuizSession();
         session.setQuizSet(quizSetWithOneQuestion());
@@ -266,6 +320,16 @@ class QuizServiceTest {
         question.getAnswers().add(secondAnswer);
         quizSet.getQuestions().add(question);
         return quizSet;
+    }
+
+    private QuizSetRequest request(String title, String question) {
+        return new QuizSetRequest(title, List.of(new QuizQuestionRequest(
+                question,
+                null,
+                null,
+                30,
+                List.of(new QuizAnswerRequest("Oui", true), new QuizAnswerRequest("Non", false))
+        )));
     }
 
     private QuizSession openQuestionSession(Instant phaseStartedAt) {

@@ -32,5 +32,7 @@ public interface QuizSessionRepository extends JpaRepository<QuizSession, Long> 
 
     boolean existsByQuizSetAndPhaseIn(QuizSet quizSet, Collection<QuizSessionPhase> phases);
 
+    boolean existsByQuizSet(QuizSet quizSet);
+
     List<QuizSession> findByQuizSet(QuizSet quizSet);
 }

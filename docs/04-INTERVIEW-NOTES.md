@@ -183,6 +183,58 @@ Pourquoi le stockage JWT en `localStorage` est a challenger avant production ?
 
 Reponse : il est simple et persistant, mais expose le token en cas de XSS. Selon le modele de menace, des cookies `HttpOnly`, une duree de vie plus courte ou un mecanisme de refresh mieux encadre peuvent etre preferables.
 
+## Capacites Ajoutees Apres Le Lot 2
+
+Ces capacites sont fonctionnelles mais ne sont pas encore considerees comme validees au meme niveau que les Lots 0 a 2, principalement faute de couverture de tests dediee.
+
+### Inscription Et Administration Utilisateur
+
+L'inscription publique normalise l'email, encode le code d'acces avec BCrypt, attribue le role `USER` et retourne un JWT. L'administration gere les profils et les roles `USER`, `VIP`, `ADMIN`, tout en interdisant la suppression ou la retrogradation du dernier administrateur.
+
+Question : pourquoi proteger le dernier administrateur dans le service et pas seulement dans l'interface ?
+
+Reponse : l'interface n'est pas une frontiere de securite et peut etre contournee. L'invariant doit etre applique dans le service pour tous les clients. Pour une forte concurrence, le comptage actuel devrait encore etre renforce par verrouillage transactionnel ou par une politique de bootstrap externe.
+
+### Feature Flags Persistants
+
+Un singleton `AppFeatureSettings` active les sections pari et quiz. La lecture est publique pour permettre le routage initial Angular, la modification est reservee aux administrateurs et le service garantit qu'au moins une fonctionnalite reste active.
+
+Question : un guard Angular suffit-il a desactiver une fonctionnalite ?
+
+Reponse : non. Le guard controle uniquement la navigation et l'UX. Si la desactivation doit aussi interdire les API, le backend doit appliquer le flag dans les cas d'usage concernes. Ce verrouillage serveur n'est pas generalise actuellement.
+
+### Quiz Et Machine D'Etats
+
+Le quiz separe le questionnaire reutilisable (`QuizSet`) de son execution (`QuizSession`). Le serveur pilote les phases `OPENING`, `QUESTION_OPEN`, `QUESTION_LOCKED`, `ANSWER_REVEALED`, `SCOREBOARD` et `FINISHED`. Les joueurs doivent rejoindre la session et ne peuvent soumettre qu'une reponse par question.
+
+Question : pourquoi modeliser les phases explicitement ?
+
+Reponse : une machine d'etats rend les transitions autorisees visibles et testables. Elle empeche par exemple une reponse apres verrouillage ou une revelation avant fermeture. Dans une version plus concurrente, les transitions devront aussi etre protegees par versionnement optimiste ou verrouillage.
+
+Question : pourquoi ne pas envoyer la bonne reponse des l'ouverture ?
+
+Reponse : le DTO joueur masque l'indicateur `correct` et l'identifiant de la bonne reponse jusqu'a la phase de revelation. Le contrat HTTP doit eviter de transmettre un secret fonctionnel que le frontend se contenterait de cacher visuellement.
+
+### SSE Et Temps Reel
+
+Le tableau de courses utilise actuellement Server-Sent Events : Spring MVC emet un snapshot toutes les deux secondes et Angular le consomme avec `EventSource`. Le quiz utilise de son cote un polling REST toutes les deux secondes.
+
+Question : quand preferer SSE a WebSocket ?
+
+Reponse : SSE convient a un flux descendant serveur vers navigateur, fonctionne sur HTTP et gere nativement la reconnexion. WebSocket devient pertinent pour des echanges bidirectionnels frequents ou un protocole temps reel plus riche. Pour des commandes ponctuelles, REST plus SSE reste souvent plus simple.
+
+Limite actuelle : un scheduler est cree par connexion SSE et le flux diffuse des snapshots complets. Avant une forte charge, il faudra mutualiser la production d'evenements, gerer le backpressure et mesurer le cout des requetes JPA repetees.
+
+### Docker, CI Et Dokploy
+
+Le backend et le frontend utilisent des images multi-stage. La production execute un JRE 25 non-root pour Spring Boot et Nginx pour Angular. PostgreSQL, backend et frontend sont relies par un reseau prive ; seul Nginx doit etre expose et transmet `/api` au backend. GitHub Actions teste Maven, construit Angular et publie les images sur GHCR.
+
+Question : pourquoi ne pas exposer directement le backend ?
+
+Reponse : un point d'entree unique simplifie TLS, CORS, les domaines et le routage. Le backend reste accessible uniquement sur le reseau interne des conteneurs.
+
+Limites actuelles : la CI ne lance ni lint ni tests frontend, `ddl-auto=update` doit etre remplace par des migrations controlees, et la publication GHCR ne declenche pas automatiquement Dokploy.
+
 ## Lot 3 : Workflow De Course Et Paris Server-Driven
 
 ### Reponse Senior Synthese

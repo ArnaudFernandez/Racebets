@@ -37,6 +37,9 @@ public class QuizSet extends AuditableEntity {
     @Column(nullable = false, length = 40)
     private QuizSetStatus status = QuizSetStatus.CREATED;
 
+    @Column(nullable = false)
+    private boolean archived;
+
     @OneToMany(mappedBy = "quizSet", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<QuizQuestion> questions = new ArrayList<>();

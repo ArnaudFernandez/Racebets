@@ -8,6 +8,9 @@ import com.pixsom.racebets.repositories.QuizQuestionRepository;
 import com.pixsom.racebets.repositories.QuizSessionRepository;
 import com.pixsom.racebets.repositories.QuizSetRepository;
 import com.pixsom.racebets.repositories.QuizSubmissionRepository;
+import com.pixsom.racebets.quiz.dto.QuizAnswerRequest;
+import com.pixsom.racebets.quiz.dto.QuizQuestionRequest;
+import com.pixsom.racebets.quiz.dto.QuizSetRequest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,7 @@ class QuizRepositoryTest {
     @Autowired QuizParticipantRepository participantRepository;
     @Autowired QuizQuestionRepository questionRepository;
     @Autowired QuizSubmissionRepository submissionRepository;
+    @Autowired QuizService quizService;
     @Autowired EntityManager entityManager;
 
     @Test
@@ -91,6 +95,69 @@ class QuizRepositoryTest {
                 .containsExactly("Ada Lovelace", "Grace Hopper");
         assertThat(scores).extracting(QuizSubmissionRepository.QuizScoreView::getScore)
                 .containsExactly(1L, 0L);
+    }
+
+    @Test
+    void updatingPlayedQuizPreservesHistoricalSubmissionAndCreatesUsableReplacement() {
+        AppUser player = userRepository.save(user("Ada", "Lovelace", "played-quiz@example.test"));
+
+        QuizSet original = new QuizSet();
+        original.setTitle("Quiz original");
+        QuizQuestion originalQuestion = new QuizQuestion();
+        originalQuestion.setQuizSet(original);
+        originalQuestion.setPosition(0);
+        originalQuestion.setText("Question originale");
+        originalQuestion.setDurationSeconds(30);
+        QuizAnswer originalAnswer = new QuizAnswer();
+        originalAnswer.setQuestion(originalQuestion);
+        originalAnswer.setPosition(0);
+        originalAnswer.setText("Reponse originale");
+        originalAnswer.setCorrect(true);
+        originalQuestion.getAnswers().add(originalAnswer);
+        original.getQuestions().add(originalQuestion);
+        quizSetRepository.save(original);
+
+        QuizSession session = new QuizSession();
+        session.setQuizSet(original);
+        session.setPhase(QuizSessionPhase.FINISHED);
+        session.setCurrentQuestionIndex(0);
+        sessionRepository.save(session);
+
+        QuizSubmission submission = new QuizSubmission();
+        submission.setSession(session);
+        submission.setQuestion(originalQuestion);
+        submission.setAnswer(originalAnswer);
+        submission.setUser(player);
+        submission.setCorrect(true);
+        submissionRepository.save(submission);
+        entityManager.flush();
+
+        Long originalId = original.getId();
+        Long originalQuestionId = originalQuestion.getId();
+        Long originalAnswerId = originalAnswer.getId();
+        Long submissionId = submission.getId();
+        QuizSetRequest update = new QuizSetRequest("Quiz modifie", List.of(new QuizQuestionRequest(
+                "Question modifiee",
+                null,
+                null,
+                45,
+                List.of(new QuizAnswerRequest("Oui", true), new QuizAnswerRequest("Non", false))
+        )));
+
+        var replacement = quizService.updateQuizSet(originalId, update);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(replacement.id()).isNotEqualTo(originalId);
+        assertThat(quizSetRepository.findById(originalId)).get().extracting(QuizSet::isArchived).isEqualTo(true);
+        assertThat(questionRepository.findById(originalQuestionId)).isPresent();
+        assertThat(submissionRepository.findById(submissionId)).get()
+                .extracting(saved -> saved.getAnswer().getId(), saved -> saved.getQuestion().getId())
+                .containsExactly(originalAnswerId, originalQuestionId);
+        assertThat(quizSetRepository.findByArchivedFalse(org.springframework.data.domain.Sort.unsorted()))
+                .extracting(QuizSet::getId)
+                .contains(replacement.id())
+                .doesNotContain(originalId);
     }
 
     private AppUser user(String name, String surname, String email) {
